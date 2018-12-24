@@ -14,7 +14,7 @@ function main() {
 
     program
         .version(pack.version)
-        .command('init')
+        .command('config')
         .action(function () {
             if (configFileExists()) {
                 inquirer.prompt([
@@ -25,14 +25,14 @@ function main() {
                         return
                     }
 
-                    init()
+                    config()
                 });
 
 
                 return
             }
 
-            init()
+            config()
         })
 
     program
@@ -44,7 +44,7 @@ function main() {
     program.parse(process.argv)
 }
 
-function init() {
+function config() {
     inquirer
         .prompt([
             { type: 'input', name: 'service_port', default: defaultServicePort, message: '请输入服务端口' },

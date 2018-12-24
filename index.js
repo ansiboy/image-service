@@ -11,7 +11,7 @@ function main() {
     let pack = json5.parse(package_text);
     program
         .version(pack.version)
-        .command('init')
+        .command('config')
         .action(function () {
         if (common_1.configFileExists()) {
             inquirer.prompt([
@@ -21,11 +21,11 @@ function main() {
                     console.log('已取消设置');
                     return;
                 }
-                init();
+                config();
             });
             return;
         }
-        init();
+        config();
     });
     program
         .command('start')
@@ -34,7 +34,7 @@ function main() {
     });
     program.parse(process.argv);
 }
-function init() {
+function config() {
     inquirer
         .prompt([
         { type: 'input', name: 'service_port', default: defaultServicePort, message: '请输入服务端口' },

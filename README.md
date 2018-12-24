@@ -1,12 +1,16 @@
 ## CLI
 
-初始化
+设置
 
-maishu-image-server init
+maishu-image-server config
+
+创建数据库
+
+maishu-image-service db
 
 启动
 
-maishu-image-service start 
+maishu-image-service start
 
 ## 接口
 
