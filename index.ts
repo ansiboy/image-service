@@ -4,6 +4,7 @@ import * as json5 from 'json5'
 import * as fs from 'fs'
 
 import { saveConfig, configFileExists, loadConfig } from './common'
+import * as figlet from 'figlet';
 
 var program = require('commander');
 
