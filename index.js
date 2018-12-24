@@ -42,7 +42,7 @@ function init() {
         { type: 'input', name: 'port', default: 3306, message: '请输入 mysql 数据库端口' },
         { type: 'input', name: 'database', default: 'image-service', message: '请输入 mysql 数据库名称' },
         { type: 'input', name: 'user', message: '请输入 mysql 账号名称' },
-        { type: 'password', name: 'password', message: '请输入 mysql 账号密码' },
+        { type: 'password', name: 'password', message: '请输入 mysql 账号密码', mask: '*' },
     ])
         .then(answers => {
         common_1.saveConfig(answers);

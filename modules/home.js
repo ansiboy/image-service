@@ -11,12 +11,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const errors_1 = require("../errors");
 const common_1 = require("../common");
 const mysql = require("mysql");
+const jimp = require("jimp");
 const maishu_node_mvc_1 = require("maishu-node-mvc");
 class HomeController {
     index({ id }) {
-        if (!id)
-            throw errors_1.errors.argumentNull('id');
-        return imageFromMysql(id);
+        return "Image Service Started";
+    }
+    image({ id, width, height }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id)
+                throw errors_1.errors.argumentNull('id');
+            let buffer;
+            let r = yield getImage(id);
+            buffer = r.buffer;
+            if (width != null || height != null) {
+                if (height == null) {
+                    height = width / r.width * r.height;
+                }
+                if (width == null) {
+                    width = height / r.height * r.width;
+                }
+                width = typeof width == 'number' ? width : parseInt(width);
+                height = typeof height == 'number' ? height : parseInt(height);
+                buffer = yield resizeImage(buffer, width, height);
+            }
+            return new maishu_node_mvc_1.ContentResult(buffer, imageContextTypes.jpeg);
+        });
     }
     upload({ image, width, height }) {
         return addImage(image, width, height, '000-000');
@@ -24,6 +44,7 @@ class HomeController {
 }
 maishu_node_mvc_1.register(HomeController)
     .action('index', '/')
+    .action('image', '/image')
     .action('upload', '/upload');
 exports.default = HomeController;
 const imageContextTypes = {
@@ -32,11 +53,11 @@ const imageContextTypes = {
     jpeg: 'image/jpeg',
     webp: 'image/webp'
 };
-function imageFromMysql(id) {
+function getImage(id) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise((resolve, reject) => {
             let conn = createConnection();
-            let sql = `select id, data from image where id = ?`;
+            let sql = `select id, data, width, height from image where id = ?`;
             conn.query(sql, id, (err, rows, fields) => {
                 if (err) {
                     reject(err);
@@ -53,13 +74,28 @@ function imageFromMysql(id) {
                     return;
                 }
                 let buffer = new Buffer(arr[1], 'base64');
-                let result = new maishu_node_mvc_1.ContentResult(buffer, imageContextTypes.jpeg);
                 // resolve({ data: buffer, contentType: imageContextTypes.jpeg })
-                resolve(result);
+                resolve({ buffer: buffer, width: rows[0].width, height: rows[0].height });
                 return;
             });
             conn.end();
         });
+    });
+}
+function resizeImage(buffer, width, height) {
+    return __awaiter(this, void 0, void 0, function* () {
+        height = height || width;
+        // return new Promise<Buffer>((resolve, reject) => {
+        let image = yield jimp.read(buffer);
+        image.resize(width, height);
+        return image.getBufferAsync(jimp.MIME_JPEG);
+        // var sharpInstance = sharp(buffer).resize(width, height);
+        // var typeMethod = (sharpInstance[type] as Function || sharpInstance.webp).bind(sharpInstance);
+        // typeMethod().toBuffer((err, data) => {
+        //     if (err) reject(err);
+        //     resolve(data);
+        // });
+        // })
     });
 }
 const contentTypes = {

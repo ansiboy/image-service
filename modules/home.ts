@@ -1,14 +1,33 @@
 import { errors } from "../errors";
 import { Config, guid, loadConfig } from "../common";
 import * as mysql from 'mysql';
-
+import * as jimp from 'jimp';
 import { register, ContentResult } from 'maishu-node-mvc'
 class HomeController {
     index({ id }) {
+        return "Image Service Started"
+    }
+    async image({ id, width, height }) {
         if (!id)
             throw errors.argumentNull('id')
 
-        return imageFromMysql(id)
+        let buffer: Buffer
+        let r = await getImage(id)
+        buffer = r.buffer
+        if (width != null || height != null) {
+            if (height == null) {
+                height = width / r.width * r.height
+            }
+            if (width == null) {
+                width = height / r.height * r.width
+            }
+            width = typeof width == 'number' ? width : parseInt(width)
+            height = typeof height == 'number' ? height : parseInt(height)
+            buffer = await resizeImage(buffer, width, height)
+        }
+
+        return new ContentResult(buffer, imageContextTypes.jpeg)
+
     }
     upload({ image, width, height }) {
         return addImage(image, width, height, '000-000')
@@ -17,6 +36,7 @@ class HomeController {
 
 register(HomeController)
     .action('index', '/')
+    .action('image', '/image')
     .action('upload', '/upload')
 
 exports.default = HomeController
@@ -28,13 +48,13 @@ const imageContextTypes = {
     webp: 'image/webp'
 }
 
-async function imageFromMysql(id) {
-
-    return new Promise((resolve, reject) => {
+async function getImage(id) {
+    type ImageData = { buffer: Buffer, width: number, height: number }
+    return new Promise<ImageData>((resolve, reject) => {
 
         let conn = createConnection();
 
-        let sql = `select id, data from image where id = ?`;
+        let sql = `select id, data, width, height from image where id = ?`;
         conn.query(sql, id, (err, rows, fields) => {
             if (err) {
                 reject(err);
@@ -54,15 +74,30 @@ async function imageFromMysql(id) {
             }
 
             let buffer = new Buffer(arr[1], 'base64');
-            let result = new ContentResult(buffer, imageContextTypes.jpeg)
             // resolve({ data: buffer, contentType: imageContextTypes.jpeg })
-            resolve(result)
+            resolve({ buffer: buffer, width: rows[0].width, height: rows[0].height })
             return;
         });
 
 
         conn.end();
     })
+}
+
+async function resizeImage(buffer: Buffer, width: number, height: number): Promise<Buffer> {
+    height = height || width;
+    // return new Promise<Buffer>((resolve, reject) => {
+    let image = await jimp.read(buffer)
+    image.resize(width, height)
+    return image.getBufferAsync(jimp.MIME_JPEG)
+    // var sharpInstance = sharp(buffer).resize(width, height);
+    // var typeMethod = (sharpInstance[type] as Function || sharpInstance.webp).bind(sharpInstance);
+    // typeMethod().toBuffer((err, data) => {
+    //     if (err) reject(err);
+
+    //     resolve(data);
+    // });
+    // })
 }
 
 const contentTypes = {

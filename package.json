@@ -25,6 +25,7 @@
     "clui": "^0.3.6",
     "commander": "^2.19.0",
     "inquirer": "^6.2.1",
+    "jimp": "^0.6.0",
     "json5": "^2.1.0",
     "maishu-node-mvc": "^1.0.4",
     "mysql": "^2.16.0"
