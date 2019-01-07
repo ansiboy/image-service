@@ -39,7 +39,10 @@ class HomeController {
         });
     }
     upload({ image, width, height }) {
-        return addImage(image, width, height, '000-000');
+        return __awaiter(this, void 0, void 0, function* () {
+            let result = yield addImage(image, width, height, '000-000');
+            return result;
+        });
     }
 }
 maishu_node_mvc_1.register(HomeController)
@@ -74,7 +77,6 @@ function getImage(id) {
                     return;
                 }
                 let buffer = new Buffer(arr[1], 'base64');
-                // resolve({ data: buffer, contentType: imageContextTypes.jpeg })
                 resolve({ buffer: buffer, width: rows[0].width, height: rows[0].height });
                 return;
             });
@@ -85,17 +87,9 @@ function getImage(id) {
 function resizeImage(buffer, width, height) {
     return __awaiter(this, void 0, void 0, function* () {
         height = height || width;
-        // return new Promise<Buffer>((resolve, reject) => {
         let image = yield jimp.read(buffer);
         image.resize(width, height);
         return image.getBufferAsync(jimp.MIME_JPEG);
-        // var sharpInstance = sharp(buffer).resize(width, height);
-        // var typeMethod = (sharpInstance[type] as Function || sharpInstance.webp).bind(sharpInstance);
-        // typeMethod().toBuffer((err, data) => {
-        //     if (err) reject(err);
-        //     resolve(data);
-        // });
-        // })
     });
 }
 const contentTypes = {
@@ -107,7 +101,23 @@ function addImage(image, width, height, application_id) {
         if (image == null) {
             throw errors_1.errors.argumentNull("image");
         }
-        return new Promise((resolve, reject) => {
+        let arr = image.split(',');
+        if (arr.length != 2) {
+            return Promise.reject(errors_1.errors.dataFormatError());
+        }
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            if (width == null || height == null) {
+                let b = new Buffer(arr[1], 'base64');
+                try {
+                    let image = yield jimp.read(b);
+                    width = image.getWidth();
+                    height = image.getHeight();
+                }
+                catch (err) {
+                    reject(err);
+                    return;
+                }
+            }
             let value = new Date(Date.now());
             let create_date_time = `${value.getFullYear()}-${value.getMonth() + 1}-${value.getDate()} ${value.getHours()}:${value.getMinutes()}:${value.getSeconds()}`;
             let conn = createConnection();
@@ -125,7 +135,7 @@ function addImage(image, width, height, application_id) {
                 resolve(result);
             });
             conn.end();
-        });
+        }));
     });
 }
 function createConnection() {

@@ -1,6 +1,6 @@
 {
   "name": "maishu-image-service",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "bin": "index.js",
@@ -28,7 +28,7 @@
     "inquirer": "^6.2.1",
     "jimp": "^0.6.0",
     "json5": "^2.1.0",
-    "maishu-node-mvc": "^1.0.4",
+    "maishu-node-mvc": "^1.0.5",
     "mysql": "^2.16.0"
   }
 }
