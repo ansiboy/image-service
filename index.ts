@@ -4,7 +4,6 @@ import * as json5 from 'json5'
 import * as fs from 'fs'
 
 import { saveConfig, configFileExists, loadConfig } from './common'
-import { start, defaultServicePort } from './app';
 
 var program = require('commander');
 
@@ -43,7 +42,6 @@ function main() {
         })
 
     program.parse(process.argv)
-
 }
 
 function config() {
@@ -63,15 +61,15 @@ function config() {
 
 }
 
-// const defaultServicePort = 48628
-// function start() {
-//     var { startServer } = require('maishu-node-mvc')
-//     let config = loadConfig()
-//     startServer({
-//         port: config.service_port || defaultServicePort,
-//         root_path: __dirname
-//     })
-// }
+const defaultServicePort = 48628
+function start() {
+    var { startServer } = require('maishu-node-mvc')
+    let config = loadConfig()
+    startServer({
+        port: config.service_port || defaultServicePort,
+        root_path: __dirname
+    })
+}
 
 main()
 
