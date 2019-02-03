@@ -3,6 +3,7 @@ import { Config, guid, loadConfig } from "../common";
 import * as mysql from 'mysql';
 import * as jimp from 'jimp';
 import { register, ContentResult } from 'maishu-node-mvc'
+import { IncomingMessage } from "http";
 
 class HomeController {
     index({ id }) {
@@ -30,8 +31,14 @@ class HomeController {
         return new ContentResult(buffer, imageContextTypes.jpeg)
 
     }
-    async upload({ image, width, height }) {
-        let result = await addImage(image, width, height, '000-000');
+    async upload({ image, width, height }, request: IncomingMessage) {
+        let userId = request.headers['user_id'] || ''
+        let result = await addImage(image, width, height, userId);
+        return result
+    }
+    async remove({ id }, request: IncomingMessage) {
+        let userId = request.headers['user_id'] as string || ''
+        let result = await removeImage(id, userId);
         return result
     }
 }
@@ -147,6 +154,21 @@ async function addImage(image: string, width: number, height: number, applicatio
     })
 }
 
+async function removeImage(id: string, application_id: string) {
+    return new Promise((resolve, reject) => {
+        let conn = createConnection();
+        let sql = `delete from image where id = ? and application_id = ?`;
+        conn.query(sql, [id, application_id], (err) => {
+            if (err) {
+                reject(err)
+                return
+            }
+
+            resolve()
+        })
+        conn.end()
+    })
+}
 function createConnection() {
     let config: Config = loadConfig()
     let mysql_setting: mysql.ConnectionConfig = {

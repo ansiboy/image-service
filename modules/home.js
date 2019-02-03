@@ -38,9 +38,17 @@ class HomeController {
             return new maishu_node_mvc_1.ContentResult(buffer, imageContextTypes.jpeg);
         });
     }
-    upload({ image, width, height }) {
+    upload({ image, width, height }, request) {
         return __awaiter(this, void 0, void 0, function* () {
-            let result = yield addImage(image, width, height, '000-000');
+            let userId = request.headers['user_id'] || '';
+            let result = yield addImage(image, width, height, userId);
+            return result;
+        });
+    }
+    remove({ id }, request) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let userId = request.headers['user_id'] || '';
+            let result = yield removeImage(id, userId);
             return result;
         });
     }
@@ -136,6 +144,22 @@ function addImage(image, width, height, application_id) {
             });
             conn.end();
         }));
+    });
+}
+function removeImage(id, application_id) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            let conn = createConnection();
+            let sql = `delete from image where id = ? and application_id = ?`;
+            conn.query(sql, [id, application_id], (err) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve();
+            });
+            conn.end();
+        });
     });
 }
 function createConnection() {
