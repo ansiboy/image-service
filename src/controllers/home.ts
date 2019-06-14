@@ -4,12 +4,15 @@ import * as mysql from 'mysql';
 import * as jimp from 'jimp';
 import { register, ContentResult } from 'maishu-node-mvc'
 import { IncomingMessage } from "http";
+import { formData } from "maishu-node-mvc/dist/server";
 
 class HomeController {
-    index({ id }) {
+    index(@formData { id }) {
         return "Image Service Started"
     }
-    async image({ id, width, height }) {
+
+
+    async image(@formData { id, width, height }) {
         if (!id)
             throw errors.argumentNull('id')
 
@@ -44,9 +47,9 @@ class HomeController {
 }
 
 register(HomeController)
-    .action('index', '/')
-    .action('image', '/image')
-    .action('upload', '/upload')
+    .action('index', ['/'])
+    .action('image', ['/image'])
+    .action('upload', ['/upload'])
 
 exports.default = HomeController
 
@@ -171,10 +174,7 @@ async function removeImage(id: string, application_id: string) {
 }
 function createConnection() {
     let config: Config = loadConfig()
-    let mysql_setting: mysql.ConnectionConfig = {
-        host: config.host, database: config.database, port: config.port,
-        password: config.password, user: config.user
-    };
+    let mysql_setting: mysql.ConnectionConfig = config.db;
     return mysql.createConnection(mysql_setting)
 }
 

@@ -1,18 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
-const json5 = require("json5");
+const config = require('../config.json');
 exports.config_file_name = 'config.json5';
 function loadConfig() {
-    let text = fs.readFileSync(exports.config_file_name).toString();
-    let obj = json5.parse(text);
-    return obj;
+    // let text = fs.readFileSync(config_file_name).toString()
+    // let obj = json5.parse(text)
+    // return obj
+    return config;
 }
 exports.loadConfig = loadConfig;
-function saveConfig(config) {
-    fs.writeFileSync(exports.config_file_name, json5.stringify(config, {}));
-}
-exports.saveConfig = saveConfig;
+// export function saveConfig(config: Config) {
+//     fs.writeFileSync(config_file_name, json5.stringify(config, {}))
+// }
 function configFileExists() {
     return fs.existsSync(exports.config_file_name);
 }

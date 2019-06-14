@@ -1,4 +1,13 @@
 "use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -13,6 +22,7 @@ const common_1 = require("../common");
 const mysql = require("mysql");
 const jimp = require("jimp");
 const maishu_node_mvc_1 = require("maishu-node-mvc");
+const server_1 = require("maishu-node-mvc/dist/server");
 class HomeController {
     index({ id }) {
         return "Image Service Started";
@@ -53,10 +63,16 @@ class HomeController {
         });
     }
 }
+__decorate([
+    __param(0, server_1.formData)
+], HomeController.prototype, "index", null);
+__decorate([
+    __param(0, server_1.formData)
+], HomeController.prototype, "image", null);
 maishu_node_mvc_1.register(HomeController)
-    .action('index', '/')
-    .action('image', '/image')
-    .action('upload', '/upload');
+    .action('index', ['/'])
+    .action('image', ['/image'])
+    .action('upload', ['/upload']);
 exports.default = HomeController;
 const imageContextTypes = {
     gif: 'image/gif',
@@ -164,9 +180,6 @@ function removeImage(id, application_id) {
 }
 function createConnection() {
     let config = common_1.loadConfig();
-    let mysql_setting = {
-        host: config.host, database: config.database, port: config.port,
-        password: config.password, user: config.user
-    };
+    let mysql_setting = config.db;
     return mysql.createConnection(mysql_setting);
 }
