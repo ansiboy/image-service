@@ -1,5 +1,2 @@
-interface Config {
-    port: number;
-}
+import { Config } from './common';
 export declare function start(config: Config): void;
-export {};

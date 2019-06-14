@@ -10,5 +10,9 @@ class Errors {
     argumentNull(name) {
         return new Error(`Argument ${name} can not be null or empty.`);
     }
+    configFieldNull(name) {
+        let msg = `Config field '${name}' is null.`;
+        return new Error(msg);
+    }
 }
 exports.errors = new Errors();
