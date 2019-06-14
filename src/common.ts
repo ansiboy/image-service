@@ -1,5 +1,5 @@
 import * as fs from 'fs'
-const config = require('../config.json')
+import { errors } from './errors';
 
 export interface Config {
     port: number,
@@ -14,16 +14,15 @@ export interface Config {
 
 export let config_file_name = 'config.json5'
 
+let config: Config
 export function loadConfig(): Config {
-    // let text = fs.readFileSync(config_file_name).toString()
-    // let obj = json5.parse(text)
-    // return obj
     return config
 }
 
-// export function saveConfig(config: Config) {
-//     fs.writeFileSync(config_file_name, json5.stringify(config, {}))
-// }
+export function setConfig(value: Config) {
+    if (!value) throw errors.argumentNull('value')
+    config = value
+}
 
 export function configFileExists() {
     return fs.existsSync(config_file_name)

@@ -1,13 +1,18 @@
 import { startServer } from 'maishu-node-mvc'
 import path = require('path')
+import { errors } from './errors';
+import { Config, setConfig } from './common';
 
-interface Config {
-    port: number,
-}
 
 export function start(config: Config) {
-    // var { startServer } = require('maishu-node-mvc')
-    // let config = loadConfig()
+    if (!config.port) {
+        throw errors.configFieldNull('port')
+    }
+    if (!config.db) {
+        throw errors.configFieldNull('db')
+    }
+
+    setConfig(config)
     startServer({
         port: config.port,
         rootPath: __dirname,
@@ -15,5 +20,4 @@ export function start(config: Config) {
     })
 }
 
-// start()
 
