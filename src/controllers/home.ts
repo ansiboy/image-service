@@ -2,9 +2,8 @@ import { errors } from "../errors";
 import { Config, guid, loadConfig } from "../common";
 import * as mysql from 'mysql';
 import * as jimp from 'jimp';
-import { register, ContentResult } from 'maishu-node-mvc'
+import { register, ContentResult,formData } from 'maishu-node-mvc';
 import { IncomingMessage } from "http";
-import { formData } from "maishu-node-mvc/dist/server";
 
 class HomeController {
     index(@formData { id }) {
