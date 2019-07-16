@@ -48,15 +48,16 @@ class HomeController {
     remove({ id }, request) {
         return __awaiter(this, void 0, void 0, function* () {
             let userId = request.headers['user_id'] || '';
-            let result = yield removeImage(id, userId);
-            return result;
+            yield removeImage(id, userId);
+            return {};
         });
     }
 }
 maishu_node_mvc_1.register(HomeController)
     .action('index', '/')
     .action('image', '/image')
-    .action('upload', '/upload');
+    .action('upload', '/upload')
+    .action('remove', '/remove');
 exports.default = HomeController;
 const imageContextTypes = {
     gif: 'image/gif',
@@ -130,7 +131,7 @@ function addImage(image, width, height, application_id) {
             let create_date_time = `${value.getFullYear()}-${value.getMonth() + 1}-${value.getDate()} ${value.getHours()}:${value.getMinutes()}:${value.getSeconds()}`;
             let conn = createConnection();
             let sql = `insert into image set ?`;
-            let item = { id: common_1.guid(), data: image, create_date_time, application_id, width, height };
+            let item = { id: `${common_1.guid()}_${width}_${height}`, data: image, create_date_time, application_id, width, height };
             conn.query(sql, item, (err, rows, fields) => {
                 if (err) {
                     reject(err);

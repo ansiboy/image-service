@@ -38,8 +38,8 @@ class HomeController {
     }
     async remove({ id }, request: IncomingMessage) {
         let userId = request.headers['user_id'] as string || ''
-        let result = await removeImage(id, userId);
-        return result
+        await removeImage(id, userId);
+        return {}
     }
 }
 
@@ -47,6 +47,7 @@ register(HomeController)
     .action('index', '/')
     .action('image', '/image')
     .action('upload', '/upload')
+    .action('remove', '/remove')
 
 exports.default = HomeController
 
@@ -136,7 +137,7 @@ async function addImage(image: string, width: number, height: number, applicatio
         let conn = createConnection();
         let sql = `insert into image set ?`;
 
-        let item = { id: guid(), data: image, create_date_time, application_id, width, height };
+        let item = { id: `${guid()}_${width}_${height}`, data: image, create_date_time, application_id, width, height };
         conn.query(sql, item, (err, rows, fields) => {
             if (err) {
                 reject(err);
