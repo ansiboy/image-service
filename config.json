@@ -1,0 +1,10 @@
+{
+    "port": 48628,
+    "db": {
+        "host": "127.0.0.1",
+        "port": 3306,
+        "database": "shop_image",
+        "user": "liuyunyuan",
+        "password": "Xuan520Lv"
+    }
+}

@@ -1,10 +1,17 @@
 import * as fs from 'fs'
 import * as json5 from 'json5'
 import * as mysql from 'mysql';
+import { errors } from './errors';
 
 export interface Config {
-    host: string, port: number, database: string,
-    user: string, password: string, service_port: number
+    port: number,
+    db: {
+        host: string,
+        port: number,
+        database: string,
+        user: string,
+        password: string
+    }
 }
 
 export let config_file_name = 'config.json5'
@@ -18,8 +25,9 @@ export function setDBConfig(value: mysql.ConnectionConfig) {
     config = value;
 }
 
-export function saveConfig(config: Config) {
-    fs.writeFileSync(config_file_name, json5.stringify(config, {}))
+export function setConfig(value: Config) {
+    if (!value) throw errors.argumentNull('value')
+    config = value
 }
 
 export function configFileExists() {

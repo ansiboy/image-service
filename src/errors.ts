@@ -14,6 +14,10 @@ class Errors {
         error.name = this.argumentFieldNull.name;
         return error;
     }
+    configFieldNull(name: string) {
+        let msg = `Config field '${name}' is null.`
+        return new Error(msg)
+    }
 }
 
 export let errors = new Errors()

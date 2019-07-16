@@ -1,9 +1,9 @@
 {
   "name": "maishu-image-service",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "",
-  "main": "index.js",
-  "bin": "index.js",
+  "main": "./out/index.js",
+  "typings": "./out/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc -p ./"
@@ -19,14 +19,6 @@
   },
   "homepage": "https://github.com/ansiboy/image-service#readme",
   "dependencies": {
-    "@types/json5": "0.0.30",
-    "@types/mysql": "^2.15.5",
-    "@types/node": "^10.12.18",
-    "chalk": "^2.4.1",
-    "clui": "^0.3.6",
-    "commander": "^2.19.0",
-    "figlet": "^1.2.1",
-    "inquirer": "^6.2.1",
     "jimp": "^0.6.0",
     "json5": "^2.1.0",
     "maishu-node-mvc": "^1.9.1",
