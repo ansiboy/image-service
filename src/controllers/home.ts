@@ -44,10 +44,10 @@ class HomeController {
 }
 
 register(HomeController)
-    .action('index', '/')
-    .action('image', '/image')
-    .action('upload', '/upload')
-    .action('remove', '/remove')
+    .action('index', ['/'])
+    .action('image', ['/image'])
+    .action('upload', ['/upload'])
+    .action('remove', ['/remove'])
 
 exports.default = HomeController
 
@@ -171,11 +171,7 @@ async function removeImage(id: string, application_id: string) {
     })
 }
 function createConnection() {
-    let config: Config = loadConfig()
-    let mysql_setting: mysql.ConnectionConfig = {
-        host: config.host, database: config.database, port: config.port,
-        password: config.password, user: config.user
-    };
-    return mysql.createConnection(mysql_setting)
+    let config = loadConfig()
+    return mysql.createConnection(config)
 }
 

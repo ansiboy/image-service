@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as json5 from 'json5'
+import * as mysql from 'mysql';
 
 export interface Config {
     host: string, port: number, database: string,
@@ -8,10 +9,13 @@ export interface Config {
 
 export let config_file_name = 'config.json5'
 
-export function loadConfig(): Config {
-    let text = fs.readFileSync(config_file_name).toString()
-    let obj = json5.parse(text)
-    return obj
+export function loadConfig() {
+    return config;
+}
+
+export let config: mysql.ConnectionConfig = null;
+export function setDBConfig(value: mysql.ConnectionConfig) {
+    config = value;
 }
 
 export function saveConfig(config: Config) {

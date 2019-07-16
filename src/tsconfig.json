@@ -3,6 +3,11 @@
     "compilerOptions": {
         "target": "es6",
         "module": "commonjs",
-        "allowJs": false
+        "allowJs": false,
+        "outDir": "../out",
+        "sourceMap": true,
+        "declaration": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
     }
 }

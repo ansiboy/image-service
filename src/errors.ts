@@ -8,6 +8,12 @@ class Errors {
     argumentNull(name: string) {
         return new Error(`Argument ${name} can not be null or empty.`)
     }
+    argumentFieldNull(fieldName: string, objectName: string): Error {
+        let msg = `The '${fieldName}' field of '${objectName}' object cannt be null.`;
+        let error = new Error(msg);
+        error.name = this.argumentFieldNull.name;
+        return error;
+    }
 }
 
 export let errors = new Errors()
