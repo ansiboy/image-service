@@ -15,9 +15,9 @@ export class Image {
     @Column({ type: "char", length: 36, nullable: true })
     application_id: string;
 
-    @Column({ type: "int" })
+    @Column({ type: "int", nullable: true })
     width: number;
 
-    @Column({ type: "int" })
+    @Column({ type: "int", nullable: true })
     height: number;
 }

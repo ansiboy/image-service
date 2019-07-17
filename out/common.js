@@ -3,15 +3,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const errors_1 = require("./errors");
 exports.config_file_name = 'config.json5';
-let config;
 function loadConfig() {
-    return config;
+    return exports.config;
 }
 exports.loadConfig = loadConfig;
+exports.config = null;
+function setDBConfig(value) {
+    exports.config = value;
+}
+exports.setDBConfig = setDBConfig;
 function setConfig(value) {
     if (!value)
         throw errors_1.errors.argumentNull('value');
-    config = value;
+    exports.config = value;
 }
 exports.setConfig = setConfig;
 function configFileExists() {
@@ -28,3 +32,4 @@ function guid() {
         s4() + '-' + s4() + s4() + s4();
 }
 exports.guid = guid;
+//# sourceMappingURL=common.js.map

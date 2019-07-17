@@ -1,21 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const maishu_node_mvc_1 = require("maishu-node-mvc");
-const path = require("path");
-const errors_1 = require("./errors");
 const common_1 = require("./common");
-function start(config) {
-    if (!config.port) {
-        throw errors_1.errors.configFieldNull('port');
-    }
-    if (!config.db) {
-        throw errors_1.errors.configFieldNull('db');
-    }
-    common_1.setConfig(config);
+const maishu_node_mvc_1 = require("maishu-node-mvc");
+const errors_1 = require("./errors");
+const data_context_1 = require("./data-context");
+function start(options) {
+    if (!options.db)
+        throw errors_1.errors.argumentFieldNull("db", "options");
+    common_1.setDBConfig(options.db);
+    //=======================
+    // 用于生成数据库
+    data_context_1.createDataContext();
+    //===========================
     maishu_node_mvc_1.startServer({
-        port: config.port,
+        port: options.port,
         rootPath: __dirname,
-        controllerDirectory: path.join(__dirname, 'controllers')
     });
 }
 exports.start = start;
+//# sourceMappingURL=index.js.map

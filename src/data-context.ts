@@ -32,8 +32,7 @@ export async function createDataContext() {
         connectTimeout: 1000,
         entities: [
             path.join(__dirname, "entities.js")
-        ],
-        name: name
+        ]
     })
 
     let dc = new ImageDataContext(connection);

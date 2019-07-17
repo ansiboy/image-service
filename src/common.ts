@@ -1,5 +1,4 @@
 import * as fs from 'fs'
-import * as json5 from 'json5'
 import * as mysql from 'mysql';
 import { errors } from './errors';
 

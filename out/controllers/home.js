@@ -5,6 +5,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
@@ -22,7 +25,6 @@ const common_1 = require("../common");
 const mysql = require("mysql");
 const jimp = require("jimp");
 const maishu_node_mvc_1 = require("maishu-node-mvc");
-const server_1 = require("maishu-node-mvc/dist/server");
 class HomeController {
     index({ id }) {
         return "Image Service Started";
@@ -64,17 +66,22 @@ class HomeController {
     }
 }
 __decorate([
-    __param(0, server_1.formData)
+    __param(0, maishu_node_mvc_1.formData),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
 ], HomeController.prototype, "index", null);
 __decorate([
-    __param(0, server_1.formData)
+    __param(0, maishu_node_mvc_1.formData),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
 ], HomeController.prototype, "image", null);
 maishu_node_mvc_1.register(HomeController)
-    .action('index', '/')
-    .action('image', '/image')
-    .action('upload', '/upload')
-    .action('remove', '/remove');
-exports.default = HomeController;
+    .action('index', ['/'])
+    .action('image', ['/image'])
+    .action('upload', ['/upload'])
+    .action('remove', ['/remove']);
 const imageContextTypes = {
     gif: 'image/gif',
     png: 'image/png',
@@ -181,6 +188,6 @@ function removeImage(id, application_id) {
 }
 function createConnection() {
     let config = common_1.loadConfig();
-    let mysql_setting = config.db;
-    return mysql.createConnection(mysql_setting);
+    return mysql.createConnection(config);
 }
+//# sourceMappingURL=home.js.map
