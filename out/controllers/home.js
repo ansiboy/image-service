@@ -25,8 +25,13 @@ const common_1 = require("../common");
 const mysql = require("mysql");
 const jimp = require("jimp");
 const maishu_node_mvc_1 = require("maishu-node-mvc");
+const decorator_1 = require("maishu-node-mvc/decorator");
+const http_1 = require("http");
+const url = require("url");
+const expression_1 = require("../expression");
+const querystring = require("querystring");
 class HomeController {
-    index({ id }) {
+    index() {
         return "Image Service Started";
     }
     image({ id, width, height }) {
@@ -64,24 +69,42 @@ class HomeController {
             return {};
         });
     }
+    list(req) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return list(req);
+        });
+    }
 }
 __decorate([
-    __param(0, maishu_node_mvc_1.formData),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], HomeController.prototype, "index", null);
-__decorate([
-    __param(0, maishu_node_mvc_1.formData),
+    __param(0, decorator_1.routeData),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "image", null);
+__decorate([
+    __param(0, decorator_1.routeData),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, http_1.IncomingMessage]),
+    __metadata("design:returntype", Promise)
+], HomeController.prototype, "upload", null);
+__decorate([
+    __param(0, decorator_1.routeData),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, http_1.IncomingMessage]),
+    __metadata("design:returntype", Promise)
+], HomeController.prototype, "remove", null);
+__decorate([
+    __param(0, decorator_1.request),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HomeController.prototype, "list", null);
 maishu_node_mvc_1.register(HomeController)
     .action('index', ['/'])
     .action('image', ['/image'])
     .action('upload', ['/upload'])
-    .action('remove', ['/remove']);
+    .action('remove', ['/remove'])
+    .action('list', ['/list']);
 const imageContextTypes = {
     gif: 'image/gif',
     png: 'image/png',
@@ -93,7 +116,7 @@ function getImage(id) {
         return new Promise((resolve, reject) => {
             let conn = createConnection();
             let sql = `select id, data, width, height from image where id = ?`;
-            conn.query(sql, id, (err, rows, fields) => {
+            conn.query(sql, id, (err, rows) => {
                 if (err) {
                     reject(err);
                     return;
@@ -155,7 +178,7 @@ function addImage(image, width, height, application_id) {
             let conn = createConnection();
             let sql = `insert into image set ?`;
             let item = { id: `${common_1.guid()}_${width}_${height}`, data: image, create_date_time, application_id, width, height };
-            conn.query(sql, item, (err, rows, fields) => {
+            conn.query(sql, item, (err) => {
                 if (err) {
                     reject(err);
                     return;
@@ -189,5 +212,131 @@ function removeImage(id, application_id) {
 function createConnection() {
     let config = common_1.loadConfig();
     return mysql.createConnection(config);
+}
+function list(req) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let postData = yield parsePostData(req);
+        let obj = parseQueryString(req);
+        let args = Object.assign({}, obj, postData);
+        let application_id = obj['application-id'] || req.headers['application-id'];
+        if (application_id == null)
+            throw errors_1.errors.parameterRequired('application-id');
+        if (args.filter) {
+            let expr = expression_1.Parser.parseExpression(args.filter);
+            if (expr.type != expression_1.ExpressionTypes.Binary) {
+                // let result: ActionResult = {
+                //     data: JSON.stringify(new Error(`Parser filter fail, filter is '${args.filter}'`)),
+                //     contentType: contentTypes.application_json,
+                // }
+                // Promise.resolve(result);
+                // return;
+                return Promise.reject(new Error(`Parser filter fail, filter is '${args.filter}'`));
+            }
+        }
+        if (args.sortExpression) {
+            let expr = expression_1.Parser.parseOrderExpression(args.sortExpression);
+            if (expr.type != expression_1.ExpressionTypes.Order) {
+                // let result: ActionResult = {
+                //     data: JSON.stringify(new Error(`Parser filter fail, filter is '${args.filter}'`)),
+                //     contentType: contentTypes.application_json,
+                // }
+                // Promise.resolve(result);
+                // return;
+                return Promise.reject(new Error(`Parser sort expression fail, sort expression is '${args.filter}'`));
+            }
+        }
+        // return new Promise<any[]>((resolve, reject) => {
+        let defaults = {
+            startRowIndex: 0,
+            maximumRows: 10,
+            sortExpression: 'create_date_time desc',
+            filter: 'true'
+        };
+        args = Object.assign(defaults, args);
+        let config = common_1.loadConfig();
+        let conn = mysql.createConnection(config);
+        let p1 = new Promise((resolve, reject) => {
+            let sql = `select id, width, height from image 
+                   where ${args.filter} and application_id = '${application_id}' 
+                   order by create_date_time desc
+                   limit ${args.startRowIndex}, ${args.maximumRows}`;
+            conn.query(sql, args, (err, rows) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(rows);
+            });
+        });
+        let p2 = new Promise((resolve, reject) => {
+            let sql = `select count(*) as count from image where ${args.filter} and application_id = '${application_id}' order by create_date_time desc`;
+            conn.query(sql, args, (err, rows) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(rows[0].count);
+            });
+        });
+        conn.end();
+        let r = yield Promise.all([p1, p2]);
+        let dataItems = r[0];
+        let totalRowCount = r[1];
+        // let result: ActionResult = {
+        //     data: JSON.stringify({ dataItems, totalRowCount }),
+        //     contentType: contentTypes.application_json
+        // };
+        return { dataItems, totalRowCount };
+        // }).then((rows) => {
+        //     let result: ActionResult = {
+        //         data: JSON.stringify(rows),
+        //         contentType: contentTypes.application_json
+        //     };
+        //     return result;
+        // });
+    });
+}
+function parseQueryString(req) {
+    let urlInfo = url.parse(req.url);
+    let { search } = urlInfo;
+    let contentType = req.headers['content-type'] || '';
+    if (!search)
+        return {};
+    search = search[0] == '?' ? search.substr(1) : search;
+    let result;
+    if (contentType.indexOf('application/json') >= 0) {
+        result = JSON.parse(search);
+    }
+    else {
+        result = querystring.parse(search);
+    }
+    return result;
+}
+function parsePostData(request) {
+    let length = request.headers['content-length'] || 0;
+    let contentType = request.headers['content-type'];
+    if (length <= 0)
+        return Promise.resolve({});
+    return new Promise((reslove, reject) => {
+        var text = "";
+        request.on('data', (data) => {
+            text = text + data.toString();
+        });
+        request.on('end', () => {
+            let obj;
+            try {
+                if (contentType.indexOf('application/json') >= 0) {
+                    obj = JSON.parse(text);
+                }
+                else {
+                    obj = querystring.parse(text);
+                }
+                reslove(obj);
+            }
+            catch (err) {
+                reject(err);
+            }
+        });
+    });
 }
 //# sourceMappingURL=home.js.map

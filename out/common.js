@@ -4,18 +4,18 @@ const fs = require("fs");
 const errors_1 = require("./errors");
 exports.config_file_name = 'config.json5';
 function loadConfig() {
-    return exports.config;
+    return dbConfig;
 }
 exports.loadConfig = loadConfig;
-exports.config = null;
+let dbConfig = null;
 function setDBConfig(value) {
-    exports.config = value;
+    dbConfig = value;
 }
 exports.setDBConfig = setDBConfig;
 function setConfig(value) {
     if (!value)
         throw errors_1.errors.argumentNull('value');
-    exports.config = value;
+    dbConfig = value;
 }
 exports.setConfig = setConfig;
 function configFileExists() {

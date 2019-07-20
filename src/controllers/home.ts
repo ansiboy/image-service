@@ -1,17 +1,20 @@
 import { errors } from "../errors";
-import { Config, guid, loadConfig } from "../common";
+import { guid, loadConfig } from "../common";
 import * as mysql from 'mysql';
 import * as jimp from 'jimp';
-import { register, ContentResult,formData } from 'maishu-node-mvc';
+import { register, ContentResult } from 'maishu-node-mvc';
+import { request, routeData } from "maishu-node-mvc/decorator";
 import { IncomingMessage } from "http";
+import * as url from 'url';
+import { Parser, ExpressionTypes } from "../expression";
+import * as querystring from 'querystring';
 
 class HomeController {
-    index(@formData { id }) {
+    index() {
         return "Image Service Started"
     }
 
-
-    async image(@formData { id, width, height }) {
+    async image(@routeData { id, width, height }) {
         if (!id)
             throw errors.argumentNull('id')
 
@@ -31,17 +34,19 @@ class HomeController {
         }
 
         return new ContentResult(buffer, imageContextTypes.jpeg)
-
     }
-    async upload({ image, width, height }, request: IncomingMessage) {
+    async upload(@routeData { image, width, height }, request: IncomingMessage) {
         let userId = request.headers['user_id'] || ''
         let result = await addImage(image, width, height, userId);
         return result
     }
-    async remove({ id }, request: IncomingMessage) {
+    async remove(@routeData { id }, request: IncomingMessage) {
         let userId = request.headers['user_id'] as string || ''
         await removeImage(id, userId);
         return {}
+    }
+    async list(@request req) {
+        return list(req)
     }
 }
 
@@ -50,9 +55,7 @@ register(HomeController)
     .action('image', ['/image'])
     .action('upload', ['/upload'])
     .action('remove', ['/remove'])
-
-
-    
+    .action('list', ['/list'])
 
 const imageContextTypes = {
     gif: 'image/gif',
@@ -68,7 +71,7 @@ async function getImage(id) {
         let conn = createConnection();
 
         let sql = `select id, data, width, height from image where id = ?`;
-        conn.query(sql, id, (err, rows, fields) => {
+        conn.query(sql, id, (err, rows) => {
             if (err) {
                 reject(err);
                 return;
@@ -141,7 +144,7 @@ async function addImage(image: string, width: number, height: number, applicatio
         let sql = `insert into image set ?`;
 
         let item = { id: `${guid()}_${width}_${height}`, data: image, create_date_time, application_id, width, height };
-        conn.query(sql, item, (err, rows, fields) => {
+        conn.query(sql, item, (err) => {
             if (err) {
                 reject(err);
                 return;
@@ -179,3 +182,159 @@ function createConnection() {
     return mysql.createConnection(config)
 }
 
+type SelectArguments = {
+    startRowIndex?: number;
+    maximumRows?: number;
+    sortExpression?: string;
+    filter?: string;
+}
+
+async function list(req: IncomingMessage) {
+
+    let postData = await parsePostData(req);
+    let obj = parseQueryString(req);
+    let args: SelectArguments = Object.assign({}, obj, postData);
+    let application_id = obj['application-id'] || req.headers['application-id'];
+    if (application_id == null)
+        throw errors.parameterRequired('application-id');
+
+
+    if (args.filter) {
+        let expr = Parser.parseExpression(args.filter);
+        if (expr.type != ExpressionTypes.Binary) {
+            // let result: ActionResult = {
+            //     data: JSON.stringify(new Error(`Parser filter fail, filter is '${args.filter}'`)),
+            //     contentType: contentTypes.application_json,
+            // }
+            // Promise.resolve(result);
+            // return;
+            return Promise.reject(new Error(`Parser filter fail, filter is '${args.filter}'`));
+        }
+    }
+    if (args.sortExpression) {
+        let expr = Parser.parseOrderExpression(args.sortExpression);
+        if (expr.type != ExpressionTypes.Order) {
+            // let result: ActionResult = {
+            //     data: JSON.stringify(new Error(`Parser filter fail, filter is '${args.filter}'`)),
+            //     contentType: contentTypes.application_json,
+            // }
+            // Promise.resolve(result);
+            // return;
+            return Promise.reject(new Error(`Parser sort expression fail, sort expression is '${args.filter}'`));
+        }
+    }
+
+    // return new Promise<any[]>((resolve, reject) => {
+
+    let defaults: SelectArguments = {
+        startRowIndex: 0,
+        maximumRows: 10,
+        sortExpression: 'create_date_time desc',
+        filter: 'true'
+    }
+
+    args = Object.assign(defaults, args)
+
+    let config = loadConfig()
+    let conn = mysql.createConnection(config);
+
+    let p1 = new Promise((resolve, reject) => {
+        let sql = `select id, width, height from image 
+                   where ${args.filter} and application_id = '${application_id}' 
+                   order by create_date_time desc
+                   limit ${args.startRowIndex}, ${args.maximumRows}`;
+
+        conn.query(sql, args, (err, rows) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            resolve(rows);
+        });
+    })
+
+    let p2 = new Promise<number>((resolve, reject) => {
+        let sql = `select count(*) as count from image where ${args.filter} and application_id = '${application_id}' order by create_date_time desc`;
+        conn.query(sql, args, (err, rows) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            resolve(rows[0].count);
+        });
+    })
+
+    conn.end();
+
+    let r = await Promise.all([p1, p2]);
+    let dataItems = r[0];
+    let totalRowCount = r[1];
+
+
+    // let result: ActionResult = {
+    //     data: JSON.stringify({ dataItems, totalRowCount }),
+    //     contentType: contentTypes.application_json
+    // };
+
+
+    return { dataItems, totalRowCount };
+
+    // }).then((rows) => {
+    //     let result: ActionResult = {
+    //         data: JSON.stringify(rows),
+    //         contentType: contentTypes.application_json
+    //     };
+    //     return result;
+
+    // });
+}
+
+function parseQueryString(req: IncomingMessage): object {
+    let urlInfo = url.parse(req.url);
+    let { search } = urlInfo;
+    let contentType = req.headers['content-type'] || '' as string;
+    if (!search)
+        return {};
+
+    search = search[0] == '?' ? search.substr(1) : search;
+    let result: object;
+    if (contentType.indexOf('application/json') >= 0) {
+        result = JSON.parse(search);
+    }
+    else {
+        result = querystring.parse(search);
+    }
+    return result;
+}
+
+function parsePostData(request: IncomingMessage): Promise<object> {
+    let length = request.headers['content-length'] || 0;
+    let contentType = request.headers['content-type'] as string;
+    if (length <= 0)
+        return Promise.resolve({});
+
+    return new Promise((reslove, reject) => {
+        var text = "";
+        request.on('data', (data: { toString: () => string }) => {
+            text = text + data.toString();
+        });
+
+        request.on('end', () => {
+            let obj;
+            try {
+                if (contentType.indexOf('application/json') >= 0) {
+                    obj = JSON.parse(text)
+                }
+                else {
+                    obj = querystring.parse(text);
+                }
+                reslove(obj);
+            }
+            catch (err) {
+                reject(err);
+            }
+        })
+    });
+}

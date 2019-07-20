@@ -2,7 +2,8 @@ import { setDBConfig } from './common'
 import { startServer } from 'maishu-node-mvc';
 import { ConnectionConfig } from 'mysql';
 import { errors } from './errors';
-import { createDataContext } from './data-context';
+import path = require("path");
+
 export function start(options: { port: number, db: ConnectionConfig }) {
 
     if (!options.db)
@@ -11,12 +12,12 @@ export function start(options: { port: number, db: ConnectionConfig }) {
     setDBConfig(options.db);
     //=======================
     // 用于生成数据库
-    createDataContext();
+    // createDataContext();
     //===========================
 
     startServer({
         port: options.port,
-        rootPath: __dirname,
+        controllerDirectory: path.join(__dirname, "controllers")
     })
 }
 

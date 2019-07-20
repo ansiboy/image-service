@@ -11,7 +11,6 @@ export interface Config {
 }
 export declare let config_file_name: string;
 export declare function loadConfig(): mysql.ConnectionConfig;
-export declare let config: mysql.ConnectionConfig;
 export declare function setDBConfig(value: mysql.ConnectionConfig): void;
 export declare function setConfig(value: Config): void;
 export declare function configFileExists(): boolean;

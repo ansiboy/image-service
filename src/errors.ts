@@ -18,6 +18,9 @@ class Errors {
         let msg = `Config field '${name}' is null.`
         return new Error(msg)
     }
+    parameterRequired(name: string) {
+        return new Error(`Parameter '${name}' is required.`)
+    }
 }
 
 export let errors = new Errors()

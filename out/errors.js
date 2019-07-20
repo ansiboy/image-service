@@ -20,6 +20,9 @@ class Errors {
         let msg = `Config field '${name}' is null.`;
         return new Error(msg);
     }
+    parameterRequired(name) {
+        return new Error(`Parameter '${name}' is required.`);
+    }
 }
 exports.errors = new Errors();
 //# sourceMappingURL=errors.js.map

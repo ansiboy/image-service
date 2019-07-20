@@ -16,17 +16,17 @@ export interface Config {
 export let config_file_name = 'config.json5'
 
 export function loadConfig() {
-    return config;
+    return dbConfig;
 }
 
-export let config: mysql.ConnectionConfig = null;
+let dbConfig: mysql.ConnectionConfig = null;
 export function setDBConfig(value: mysql.ConnectionConfig) {
-    config = value;
+    dbConfig = value;
 }
 
 export function setConfig(value: Config) {
     if (!value) throw errors.argumentNull('value')
-    config = value
+    dbConfig = value
 }
 
 export function configFileExists() {

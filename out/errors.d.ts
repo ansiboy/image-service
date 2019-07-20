@@ -4,6 +4,7 @@ declare class Errors {
     argumentNull(name: string): Error;
     argumentFieldNull(fieldName: string, objectName: string): Error;
     configFieldNull(name: string): Error;
+    parameterRequired(name: string): Error;
 }
 export declare let errors: Errors;
 export {};
