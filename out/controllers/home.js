@@ -25,7 +25,7 @@ const common_1 = require("../common");
 const mysql = require("mysql");
 const jimp = require("jimp");
 const maishu_node_mvc_1 = require("maishu-node-mvc");
-const decorator_1 = require("maishu-node-mvc/decorator");
+const decorators_1 = require("maishu-node-mvc/decorators");
 const http_1 = require("http");
 const url = require("url");
 const expression_1 = require("../expression");
@@ -55,18 +55,18 @@ class HomeController {
             return new maishu_node_mvc_1.ContentResult(buffer, imageContextTypes.jpeg);
         });
     }
-    upload({ image, width, height }, request) {
+    upload({ image, width, height }, req) {
         return __awaiter(this, void 0, void 0, function* () {
-            let userId = request.headers['user_id'] || '';
-            let result = yield addImage(image, width, height, userId);
+            let applicationId = getApplicationId(req);
+            let result = yield addImage(image, width, height, applicationId);
             return result;
         });
     }
-    remove({ id }, request) {
+    remove({ id }, req) {
         return __awaiter(this, void 0, void 0, function* () {
-            let userId = request.headers['user_id'] || '';
-            yield removeImage(id, userId);
-            return {};
+            let applicationId = getApplicationId(req);
+            yield removeImage(id, applicationId);
+            return { id };
         });
     }
     list(req) {
@@ -76,25 +76,25 @@ class HomeController {
     }
 }
 __decorate([
-    __param(0, decorator_1.routeData),
+    __param(0, decorators_1.routeData),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "image", null);
 __decorate([
-    __param(0, decorator_1.routeData),
+    __param(0, decorators_1.routeData), __param(1, decorators_1.request),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, http_1.IncomingMessage]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "upload", null);
 __decorate([
-    __param(0, decorator_1.routeData),
+    __param(0, decorators_1.routeData), __param(1, decorators_1.request),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, http_1.IncomingMessage]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "remove", null);
 __decorate([
-    __param(0, decorator_1.request),
+    __param(0, decorators_1.request),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
@@ -147,10 +147,10 @@ function resizeImage(buffer, width, height) {
         return image.getBufferAsync(jimp.MIME_JPEG);
     });
 }
-const contentTypes = {
-    application_json: 'application/json',
-    text_plain: 'text/plain',
-};
+// const contentTypes = {
+//     application_json: 'application/json',
+//     text_plain: 'text/plain',
+// }
 function addImage(image, width, height, application_id) {
     return __awaiter(this, void 0, void 0, function* () {
         if (image == null) {
@@ -183,11 +183,11 @@ function addImage(image, width, height, application_id) {
                     reject(err);
                     return;
                 }
-                let result = {
-                    data: JSON.stringify({ id: item.id }),
-                    contentType: contentTypes.application_json
-                };
-                resolve(result);
+                // let result = {
+                //     data: JSON.stringify({ id: item.id }),
+                //     contentType: contentTypes.application_json
+                // };
+                resolve({ id: item.id });
             });
             conn.end();
         }));
@@ -213,39 +213,31 @@ function createConnection() {
     let config = common_1.loadConfig();
     return mysql.createConnection(config);
 }
+function getApplicationId(req) {
+    let obj = parseQueryString(req);
+    let application_id = obj['application-id'] || req.headers['application-id'];
+    return application_id;
+}
 function list(req) {
     return __awaiter(this, void 0, void 0, function* () {
         let postData = yield parsePostData(req);
         let obj = parseQueryString(req);
         let args = Object.assign({}, obj, postData);
-        let application_id = obj['application-id'] || req.headers['application-id'];
+        let application_id = getApplicationId(req);
         if (application_id == null)
             throw errors_1.errors.parameterRequired('application-id');
         if (args.filter) {
             let expr = expression_1.Parser.parseExpression(args.filter);
             if (expr.type != expression_1.ExpressionTypes.Binary) {
-                // let result: ActionResult = {
-                //     data: JSON.stringify(new Error(`Parser filter fail, filter is '${args.filter}'`)),
-                //     contentType: contentTypes.application_json,
-                // }
-                // Promise.resolve(result);
-                // return;
                 return Promise.reject(new Error(`Parser filter fail, filter is '${args.filter}'`));
             }
         }
         if (args.sortExpression) {
             let expr = expression_1.Parser.parseOrderExpression(args.sortExpression);
             if (expr.type != expression_1.ExpressionTypes.Order) {
-                // let result: ActionResult = {
-                //     data: JSON.stringify(new Error(`Parser filter fail, filter is '${args.filter}'`)),
-                //     contentType: contentTypes.application_json,
-                // }
-                // Promise.resolve(result);
-                // return;
                 return Promise.reject(new Error(`Parser sort expression fail, sort expression is '${args.filter}'`));
             }
         }
-        // return new Promise<any[]>((resolve, reject) => {
         let defaults = {
             startRowIndex: 0,
             maximumRows: 10,
@@ -256,10 +248,23 @@ function list(req) {
         let config = common_1.loadConfig();
         let conn = mysql.createConnection(config);
         let p1 = new Promise((resolve, reject) => {
-            let sql = `select id, width, height from image 
-                   where ${args.filter} and application_id = '${application_id}' 
+            let sql;
+            if (application_id) {
+                args.filter = args.filter ?
+                    `${args.filter} and application_id = '${application_id}'` :
+                    `application_id = '${application_id}'`;
+            }
+            if (args.filter) {
+                sql = `select id, width, height from image 
+                   where ${args.filter}
                    order by create_date_time desc
                    limit ${args.startRowIndex}, ${args.maximumRows}`;
+            }
+            else {
+                sql = `select id, width, height from image 
+                   order by create_date_time desc
+                   limit ${args.startRowIndex}, ${args.maximumRows}`;
+            }
             conn.query(sql, args, (err, rows) => {
                 if (err) {
                     reject(err);
@@ -282,18 +287,7 @@ function list(req) {
         let r = yield Promise.all([p1, p2]);
         let dataItems = r[0];
         let totalRowCount = r[1];
-        // let result: ActionResult = {
-        //     data: JSON.stringify({ dataItems, totalRowCount }),
-        //     contentType: contentTypes.application_json
-        // };
         return { dataItems, totalRowCount };
-        // }).then((rows) => {
-        //     let result: ActionResult = {
-        //         data: JSON.stringify(rows),
-        //         contentType: contentTypes.application_json
-        //     };
-        //     return result;
-        // });
     });
 }
 function parseQueryString(req) {
@@ -339,4 +333,3 @@ function parsePostData(request) {
         });
     });
 }
-//# sourceMappingURL=home.js.map

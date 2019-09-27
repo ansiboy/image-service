@@ -3,7 +3,7 @@ import { guid, loadConfig } from "../common";
 import * as mysql from 'mysql';
 import * as jimp from 'jimp';
 import { register, ContentResult } from 'maishu-node-mvc';
-import { request, routeData } from "maishu-node-mvc/decorator";
+import { request, routeData } from "maishu-node-mvc/decorators";
 import { IncomingMessage } from "http";
 import * as url from 'url';
 import { Parser, ExpressionTypes } from "../expression";
@@ -35,15 +35,15 @@ class HomeController {
 
         return new ContentResult(buffer, imageContextTypes.jpeg)
     }
-    async upload(@routeData { image, width, height }, request: IncomingMessage) {
-        let userId = request.headers['user_id'] || ''
-        let result = await addImage(image, width, height, userId);
+    async upload(@routeData { image, width, height }, @request req: IncomingMessage) {
+        let applicationId = getApplicationId(req);
+        let result = await addImage(image, width, height, applicationId);
         return result
     }
-    async remove(@routeData { id }, request: IncomingMessage) {
-        let userId = request.headers['user_id'] as string || ''
-        await removeImage(id, userId);
-        return {}
+    async remove(@routeData { id }, @request req: IncomingMessage) {
+        let applicationId = getApplicationId(req);
+        await removeImage(id, applicationId);
+        return { id }
     }
     async list(@request req) {
         return list(req)
@@ -106,12 +106,12 @@ async function resizeImage(buffer: Buffer, width: number, height: number): Promi
     return image.getBufferAsync(jimp.MIME_JPEG)
 }
 
-const contentTypes = {
-    application_json: 'application/json',
-    text_plain: 'text/plain',
-}
+// const contentTypes = {
+//     application_json: 'application/json',
+//     text_plain: 'text/plain',
+// }
 
-async function addImage(image: string, width: number, height: number, application_id) {
+async function addImage(image: string, width: number, height: number, application_id: string): Promise<{ id: string }> {
 
     if (image == null) {
         throw errors.argumentNull("image");
@@ -150,11 +150,11 @@ async function addImage(image: string, width: number, height: number, applicatio
                 return;
             }
 
-            let result = {
-                data: JSON.stringify({ id: item.id }),
-                contentType: contentTypes.application_json
-            };
-            resolve(result);
+            // let result = {
+            //     data: JSON.stringify({ id: item.id }),
+            //     contentType: contentTypes.application_json
+            // };
+            resolve({ id: item.id });
         })
 
         conn.end();
@@ -189,12 +189,18 @@ type SelectArguments = {
     filter?: string;
 }
 
+function getApplicationId(req: IncomingMessage): string {
+    let obj = parseQueryString(req);
+    let application_id = obj['application-id'] || req.headers['application-id'];
+    return application_id;
+}
+
 async function list(req: IncomingMessage) {
 
     let postData = await parsePostData(req);
     let obj = parseQueryString(req);
     let args: SelectArguments = Object.assign({}, obj, postData);
-    let application_id = obj['application-id'] || req.headers['application-id'];
+    let application_id = getApplicationId(req);
     if (application_id == null)
         throw errors.parameterRequired('application-id');
 
@@ -202,29 +208,15 @@ async function list(req: IncomingMessage) {
     if (args.filter) {
         let expr = Parser.parseExpression(args.filter);
         if (expr.type != ExpressionTypes.Binary) {
-            // let result: ActionResult = {
-            //     data: JSON.stringify(new Error(`Parser filter fail, filter is '${args.filter}'`)),
-            //     contentType: contentTypes.application_json,
-            // }
-            // Promise.resolve(result);
-            // return;
             return Promise.reject(new Error(`Parser filter fail, filter is '${args.filter}'`));
         }
     }
     if (args.sortExpression) {
         let expr = Parser.parseOrderExpression(args.sortExpression);
         if (expr.type != ExpressionTypes.Order) {
-            // let result: ActionResult = {
-            //     data: JSON.stringify(new Error(`Parser filter fail, filter is '${args.filter}'`)),
-            //     contentType: contentTypes.application_json,
-            // }
-            // Promise.resolve(result);
-            // return;
             return Promise.reject(new Error(`Parser sort expression fail, sort expression is '${args.filter}'`));
         }
     }
-
-    // return new Promise<any[]>((resolve, reject) => {
 
     let defaults: SelectArguments = {
         startRowIndex: 0,
@@ -239,10 +231,24 @@ async function list(req: IncomingMessage) {
     let conn = mysql.createConnection(config);
 
     let p1 = new Promise((resolve, reject) => {
-        let sql = `select id, width, height from image 
-                   where ${args.filter} and application_id = '${application_id}' 
+        let sql: string;
+        if (application_id) {
+            args.filter = args.filter ?
+                `${args.filter} and application_id = '${application_id}'` :
+                `application_id = '${application_id}'`;
+        }
+
+        if (args.filter) {
+            sql = `select id, width, height from image 
+                   where ${args.filter}
                    order by create_date_time desc
                    limit ${args.startRowIndex}, ${args.maximumRows}`;
+        }
+        else {
+            sql = `select id, width, height from image 
+                   order by create_date_time desc
+                   limit ${args.startRowIndex}, ${args.maximumRows}`;
+        }
 
         conn.query(sql, args, (err, rows) => {
             if (err) {
@@ -272,23 +278,8 @@ async function list(req: IncomingMessage) {
     let dataItems = r[0];
     let totalRowCount = r[1];
 
-
-    // let result: ActionResult = {
-    //     data: JSON.stringify({ dataItems, totalRowCount }),
-    //     contentType: contentTypes.application_json
-    // };
-
-
     return { dataItems, totalRowCount };
 
-    // }).then((rows) => {
-    //     let result: ActionResult = {
-    //         data: JSON.stringify(rows),
-    //         contentType: contentTypes.application_json
-    //     };
-    //     return result;
-
-    // });
 }
 
 function parseQueryString(req: IncomingMessage): object {

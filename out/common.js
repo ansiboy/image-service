@@ -32,4 +32,3 @@ function guid() {
         s4() + '-' + s4() + s4() + s4();
 }
 exports.guid = guid;
-//# sourceMappingURL=common.js.map

@@ -18,4 +18,3 @@ function start(options) {
     });
 }
 exports.start = start;
-//# sourceMappingURL=index.js.map

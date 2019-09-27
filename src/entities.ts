@@ -3,7 +3,8 @@ import { Entity, PrimaryColumn, Column } from "typeorm";
 @Entity("image")
 export class Image {
 
-    @PrimaryColumn({ type: "char", length: 36 })
+    /** ID 格式为 GUID_WIDTH_HEIGHT */
+    @PrimaryColumn({ type: "char", length: 100 })
     id: string;
 
     @Column({ type: "mediumtext" })

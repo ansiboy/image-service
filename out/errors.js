@@ -25,4 +25,3 @@ class Errors {
     }
 }
 exports.errors = new Errors();
-//# sourceMappingURL=errors.js.map
