@@ -1,7 +1,7 @@
 const { start } = require("./out/index")
 
 start({
-    port: 2510,
+    port: 48628,
     db: {
         host: "127.0.0.1",
         database: "shop_image",

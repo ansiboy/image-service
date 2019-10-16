@@ -25,12 +25,12 @@ const common_1 = require("../common");
 const mysql = require("mysql");
 const jimp = require("jimp");
 const maishu_node_mvc_1 = require("maishu-node-mvc");
-const decorators_1 = require("maishu-node-mvc/decorators");
+const maishu_node_mvc_2 = require("maishu-node-mvc");
 const http_1 = require("http");
 const url = require("url");
 const expression_1 = require("../expression");
 const querystring = require("querystring");
-class HomeController {
+let HomeController = class HomeController {
     index() {
         return "Image Service Started";
     }
@@ -74,37 +74,52 @@ class HomeController {
             return list(req);
         });
     }
-}
+};
 __decorate([
-    __param(0, decorators_1.routeData),
+    maishu_node_mvc_1.action("/"),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], HomeController.prototype, "index", null);
+__decorate([
+    maishu_node_mvc_1.action(),
+    __param(0, maishu_node_mvc_2.routeData),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "image", null);
 __decorate([
-    __param(0, decorators_1.routeData), __param(1, decorators_1.request),
+    maishu_node_mvc_1.action(),
+    __param(0, maishu_node_mvc_2.routeData), __param(1, maishu_node_mvc_2.request),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, http_1.IncomingMessage]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "upload", null);
 __decorate([
-    __param(0, decorators_1.routeData), __param(1, decorators_1.request),
+    maishu_node_mvc_1.action(),
+    __param(0, maishu_node_mvc_2.routeData), __param(1, maishu_node_mvc_2.request),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, http_1.IncomingMessage]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "remove", null);
 __decorate([
-    __param(0, decorators_1.request),
+    maishu_node_mvc_1.action(),
+    __param(0, maishu_node_mvc_2.request),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], HomeController.prototype, "list", null);
-maishu_node_mvc_1.register(HomeController)
-    .action('index', ['/'])
-    .action('image', ['/image'])
-    .action('upload', ['/upload'])
-    .action('remove', ['/remove'])
-    .action('list', ['/list']);
+HomeController = __decorate([
+    maishu_node_mvc_1.controller("/")
+], HomeController);
+exports.HomeController = HomeController;
+// let serverContext: ServerContext = { data: {}, controllerDefines: [] };
+// register(HomeController, serverContext)
+//     .action('index', ['/'])
+//     .action('image', ['/image'])
+//     .action('upload', ['/upload'])
+//     .action('remove', ['/remove'])
+//     .action('list', ['/list'])
 const imageContextTypes = {
     gif: 'image/gif',
     png: 'image/png',

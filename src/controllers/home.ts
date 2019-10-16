@@ -1,19 +1,23 @@
 import { errors } from "../errors";
 import { guid, loadConfig } from "../common";
 import * as mysql from 'mysql';
-import * as jimp from 'jimp';
-import { register, ContentResult } from 'maishu-node-mvc';
-import { request, routeData } from "maishu-node-mvc/decorators";
+import jimp = require('jimp');
+import { register, ContentResult, ServerContext, controller, action } from 'maishu-node-mvc';
+import { request, routeData } from "maishu-node-mvc";
 import { IncomingMessage } from "http";
 import * as url from 'url';
 import { Parser, ExpressionTypes } from "../expression";
 import * as querystring from 'querystring';
+import { access } from "fs";
 
-class HomeController {
+@controller("/")
+export class HomeController {
+    @action("/")
     index() {
         return "Image Service Started"
     }
 
+    @action()
     async image(@routeData { id, width, height }) {
         if (!id)
             throw errors.argumentNull('id')
@@ -35,27 +39,34 @@ class HomeController {
 
         return new ContentResult(buffer, imageContextTypes.jpeg)
     }
+
+    @action()
     async upload(@routeData { image, width, height }, @request req: IncomingMessage) {
         let applicationId = getApplicationId(req);
         let result = await addImage(image, width, height, applicationId);
         return result
     }
+
+    @action()
     async remove(@routeData { id }, @request req: IncomingMessage) {
         let applicationId = getApplicationId(req);
         await removeImage(id, applicationId);
         return { id }
     }
+
+    @action()
     async list(@request req) {
         return list(req)
     }
 }
 
-register(HomeController)
-    .action('index', ['/'])
-    .action('image', ['/image'])
-    .action('upload', ['/upload'])
-    .action('remove', ['/remove'])
-    .action('list', ['/list'])
+// let serverContext: ServerContext = { data: {}, controllerDefines: [] };
+// register(HomeController, serverContext)
+//     .action('index', ['/'])
+//     .action('image', ['/image'])
+//     .action('upload', ['/upload'])
+//     .action('remove', ['/remove'])
+//     .action('list', ['/list'])
 
 const imageContextTypes = {
     gif: 'image/gif',
