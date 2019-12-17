@@ -1,8 +1,8 @@
 import { errors } from "../errors";
 import { guid, settings } from "../common";
 import * as mysql from 'mysql';
-import jimp from 'jimp';
-import { register, ContentResult, ServerContext, controller, action } from 'maishu-node-mvc';
+import jimp = require("jimp");
+import { ContentResult, controller, action } from 'maishu-node-mvc';
 import { request, routeData } from "maishu-node-mvc";
 import { IncomingMessage } from "http";
 import * as url from 'url';

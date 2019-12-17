@@ -24,7 +24,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const errors_1 = require("../errors");
 const common_1 = require("../common");
 const mysql = require("mysql");
-const jimp_1 = require("jimp");
+const jimp = require("jimp");
 const maishu_node_mvc_1 = require("maishu-node-mvc");
 const maishu_node_mvc_2 = require("maishu-node-mvc");
 const http_1 = require("http");
@@ -158,9 +158,9 @@ function getImage(id) {
 function resizeImage(buffer, width, height) {
     return __awaiter(this, void 0, void 0, function* () {
         height = height || width;
-        let image = yield jimp_1.default.read(buffer);
+        let image = yield jimp.read(buffer);
         image.resize(width, height);
-        return image.getBufferAsync(jimp_1.default.MIME_JPEG);
+        return image.getBufferAsync(jimp.MIME_JPEG);
     });
 }
 // const contentTypes = {
@@ -180,7 +180,7 @@ function addImage(image, width, height, application_id) {
             if (width == null || height == null) {
                 let b = new Buffer(arr[1], 'base64');
                 try {
-                    let image = yield jimp_1.default.read(b);
+                    let image = yield jimp.read(b);
                     width = image.getWidth();
                     height = image.getHeight();
                 }
