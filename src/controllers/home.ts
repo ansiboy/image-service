@@ -1,14 +1,13 @@
 import { errors } from "../errors";
-import { guid, loadConfig } from "../common";
+import { guid, settings } from "../common";
 import * as mysql from 'mysql';
-import jimp = require('jimp');
+import jimp from 'jimp';
 import { register, ContentResult, ServerContext, controller, action } from 'maishu-node-mvc';
 import { request, routeData } from "maishu-node-mvc";
 import { IncomingMessage } from "http";
 import * as url from 'url';
 import { Parser, ExpressionTypes } from "../expression";
 import * as querystring from 'querystring';
-import { access } from "fs";
 
 @controller("/")
 export class HomeController {
@@ -100,7 +99,7 @@ async function getImage(id) {
                 return;
             }
 
-            let buffer = new Buffer(arr[1], 'base64');
+            let buffer = Buffer.from(arr[1], 'base64');
             resolve({ buffer: buffer, width: rows[0].width, height: rows[0].height })
             return;
         });
@@ -189,7 +188,8 @@ async function removeImage(id: string, application_id: string) {
 }
 
 function createConnection() {
-    let config = loadConfig()
+    let config = settings.db;
+    console.assert(config != null);
     return mysql.createConnection(config)
 }
 
@@ -238,7 +238,8 @@ async function list(req: IncomingMessage) {
 
     args = Object.assign(defaults, args)
 
-    let config = loadConfig()
+    let config = settings.db;
+    console.assert(config != null);
     let conn = mysql.createConnection(config);
 
     let p1 = new Promise((resolve, reject) => {

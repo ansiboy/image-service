@@ -1,5 +1,3 @@
-import { ConnectionConfig } from 'mysql';
-export declare function start(options: {
-    port: number;
-    db: ConnectionConfig;
-}): void;
+import { Settings } from './common';
+export { Settings } from "./common";
+export declare function start(settings: Settings): void;

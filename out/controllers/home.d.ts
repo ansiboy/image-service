@@ -21,7 +21,7 @@ export declare class HomeController {
         id: any;
     }>;
     list(req: any): Promise<{
-        dataItems: {};
-        totalRowCount: number;
+        dataItems: unknown;
+        totalRowCount: unknown;
     }>;
 }

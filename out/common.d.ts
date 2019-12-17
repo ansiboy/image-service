@@ -1,5 +1,4 @@
-import * as mysql from 'mysql';
-export interface Config {
+export interface Settings {
     port: number;
     db: {
         host: string;
@@ -9,9 +8,7 @@ export interface Config {
         password: string;
     };
 }
+export declare let settings: Settings;
 export declare let config_file_name: string;
-export declare function loadConfig(): mysql.ConnectionConfig;
-export declare function setDBConfig(value: mysql.ConnectionConfig): void;
-export declare function setConfig(value: Config): void;
 export declare function configFileExists(): boolean;
 export declare function guid(): string;

@@ -12,10 +12,11 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -23,7 +24,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const errors_1 = require("../errors");
 const common_1 = require("../common");
 const mysql = require("mysql");
-const jimp = require("jimp");
+const jimp_1 = require("jimp");
 const maishu_node_mvc_1 = require("maishu-node-mvc");
 const maishu_node_mvc_2 = require("maishu-node-mvc");
 const http_1 = require("http");
@@ -146,7 +147,7 @@ function getImage(id) {
                     reject(errors_1.errors.dataFormatError());
                     return;
                 }
-                let buffer = new Buffer(arr[1], 'base64');
+                let buffer = Buffer.from(arr[1], 'base64');
                 resolve({ buffer: buffer, width: rows[0].width, height: rows[0].height });
                 return;
             });
@@ -157,9 +158,9 @@ function getImage(id) {
 function resizeImage(buffer, width, height) {
     return __awaiter(this, void 0, void 0, function* () {
         height = height || width;
-        let image = yield jimp.read(buffer);
+        let image = yield jimp_1.default.read(buffer);
         image.resize(width, height);
-        return image.getBufferAsync(jimp.MIME_JPEG);
+        return image.getBufferAsync(jimp_1.default.MIME_JPEG);
     });
 }
 // const contentTypes = {
@@ -179,7 +180,7 @@ function addImage(image, width, height, application_id) {
             if (width == null || height == null) {
                 let b = new Buffer(arr[1], 'base64');
                 try {
-                    let image = yield jimp.read(b);
+                    let image = yield jimp_1.default.read(b);
                     width = image.getWidth();
                     height = image.getHeight();
                 }
@@ -225,7 +226,8 @@ function removeImage(id, application_id) {
     });
 }
 function createConnection() {
-    let config = common_1.loadConfig();
+    let config = common_1.settings.db;
+    console.assert(config != null);
     return mysql.createConnection(config);
 }
 function getApplicationId(req) {
@@ -260,7 +262,8 @@ function list(req) {
             filter: 'true'
         };
         args = Object.assign(defaults, args);
-        let config = common_1.loadConfig();
+        let config = common_1.settings.db;
+        console.assert(config != null);
         let conn = mysql.createConnection(config);
         let p1 = new Promise((resolve, reject) => {
             let sql;

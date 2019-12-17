@@ -1,23 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
-const errors_1 = require("./errors");
+exports.settings = {};
 exports.config_file_name = 'config.json5';
-function loadConfig() {
-    return dbConfig;
-}
-exports.loadConfig = loadConfig;
-let dbConfig = null;
-function setDBConfig(value) {
-    dbConfig = value;
-}
-exports.setDBConfig = setDBConfig;
-function setConfig(value) {
-    if (!value)
-        throw errors_1.errors.argumentNull('value');
-    dbConfig = value;
-}
-exports.setConfig = setConfig;
+// export function loadConfig() {
+//     return dbConfig;
+// }
+// let dbConfig: mysql.ConnectionConfig = null;
+// export function setDBConfig(value: mysql.ConnectionConfig) {
+//     dbConfig = value;
+// }
+// export function setConfig(value: Settings) {
+//     if (!value) throw errors.argumentNull('value')
+//     dbConfig = value
+// }
 function configFileExists() {
     return fs.existsSync(exports.config_file_name);
 }

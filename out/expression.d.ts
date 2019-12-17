@@ -10,14 +10,15 @@ export declare enum ExpressionTypes {
 declare abstract class Expression {
     private _type;
     constructor(type: ExpressionTypes);
-    readonly type: ExpressionTypes;
+    get type(): ExpressionTypes;
     abstract toString(): string;
 }
 export declare class ConstantExpression<T> extends Expression {
     _value: T;
     text: string;
     constructor(value: T);
-    value: T;
+    get value(): T;
+    set value(value: T);
     toString(): string;
 }
 export declare class MemberExpression extends Expression {
@@ -25,8 +26,8 @@ export declare class MemberExpression extends Expression {
     private _expression;
     private text;
     constructor(name: string, source?: Expression);
-    readonly expression: Expression;
-    readonly name: string;
+    get expression(): Expression;
+    get name(): string;
     toString(): any;
 }
 export declare class BinaryExpression extends Expression {
@@ -35,9 +36,9 @@ export declare class BinaryExpression extends Expression {
     private _leftExpression;
     private text;
     constructor(op: string, left: Expression, right: Expression);
-    readonly leftExpression: Expression;
-    readonly rightExpression: Expression;
-    readonly operator: string;
+    get leftExpression(): Expression;
+    get rightExpression(): Expression;
+    get operator(): string;
     toString(): any;
 }
 export declare class MethodCallExpression extends Expression {
@@ -53,7 +54,7 @@ export declare class OrderExpression extends Expression {
     private text;
     private _sortType;
     constructor(member: MemberExpression, sortType: SortType);
-    readonly sortType: SortType;
+    get sortType(): SortType;
     toString(): string;
 }
 export declare class Parser {

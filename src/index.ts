@@ -1,22 +1,26 @@
-import { setDBConfig } from './common'
+import { Settings, settings as commonSettings } from './common'
 import { startServer } from 'maishu-node-mvc';
-import { ConnectionConfig } from 'mysql';
 import { errors } from './errors';
 import path = require("path");
 
-export function start(options: { port: number, db: ConnectionConfig }) {
+export { Settings } from "./common";
 
-    if (!options.db)
+export function start(settings: Settings) {
+    if (!settings)
+        throw errors.argumentNull("settings");
+
+    if (!settings.db)
         throw errors.argumentFieldNull("db", "options");
 
-    setDBConfig(options.db);
+    Object.assign(commonSettings, settings);
+
     //=======================
     // 用于生成数据库
     // createDataContext();
     //===========================
 
     startServer({
-        port: options.port,
+        port: settings.port,
         controllerDirectory: path.join(__dirname, "controllers")
     })
 }

@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import * as mysql from 'mysql';
 import { errors } from './errors';
 
-export interface Config {
+export interface Settings {
     port: number,
     db: {
         host: string,
@@ -13,21 +13,23 @@ export interface Config {
     }
 }
 
+export let settings = {} as Settings;
+
 export let config_file_name = 'config.json5'
 
-export function loadConfig() {
-    return dbConfig;
-}
+// export function loadConfig() {
+//     return dbConfig;
+// }
 
-let dbConfig: mysql.ConnectionConfig = null;
-export function setDBConfig(value: mysql.ConnectionConfig) {
-    dbConfig = value;
-}
+// let dbConfig: mysql.ConnectionConfig = null;
+// export function setDBConfig(value: mysql.ConnectionConfig) {
+//     dbConfig = value;
+// }
 
-export function setConfig(value: Config) {
-    if (!value) throw errors.argumentNull('value')
-    dbConfig = value
-}
+// export function setConfig(value: Settings) {
+//     if (!value) throw errors.argumentNull('value')
+//     dbConfig = value
+// }
 
 export function configFileExists() {
     return fs.existsSync(config_file_name)

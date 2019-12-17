@@ -4,16 +4,18 @@ const common_1 = require("./common");
 const maishu_node_mvc_1 = require("maishu-node-mvc");
 const errors_1 = require("./errors");
 const path = require("path");
-function start(options) {
-    if (!options.db)
+function start(settings) {
+    if (!settings)
+        throw errors_1.errors.argumentNull("settings");
+    if (!settings.db)
         throw errors_1.errors.argumentFieldNull("db", "options");
-    common_1.setDBConfig(options.db);
+    Object.assign(common_1.settings, settings);
     //=======================
     // 用于生成数据库
     // createDataContext();
     //===========================
     maishu_node_mvc_1.startServer({
-        port: options.port,
+        port: settings.port,
         controllerDirectory: path.join(__dirname, "controllers")
     });
 }

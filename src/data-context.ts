@@ -1,6 +1,6 @@
 import { EntityManager, Repository, createConnection, Connection } from "typeorm"
 import { Image } from "./entities";
-import { loadConfig } from "./common";
+import { settings } from "./common";
 import path = require("path");
 import { errors } from "./errors";
 
@@ -19,7 +19,8 @@ export class ImageDataContext {
 }
 
 export async function createDataContext() {
-    let config = loadConfig();
+    let config = settings.db;
+    console.assert(config != null);
     let connection = await createConnection({
         type: "mysql",
         host: config.host,
