@@ -2,18 +2,36 @@ import { errors } from "../errors";
 import { guid, settings } from "../common";
 import * as mysql from 'mysql';
 import jimp = require("jimp");
-import { ContentResult, controller, action } from 'maishu-node-mvc';
+import { ContentResult, controller, action, serverContext, ServerContext } from 'maishu-node-mvc';
 import { request, routeData } from "maishu-node-mvc";
 import { IncomingMessage } from "http";
 import * as url from 'url';
 import { Parser, ExpressionTypes } from "../expression";
 import * as querystring from 'querystring';
+import { ServerContextData } from "../types";
+import path = require("path");
+import fs = require("fs");
 
 @controller("/")
 export class HomeController {
     @action("/")
     index() {
         return "Image Service Started"
+    }
+
+    @action("/Images/*")
+    async Image(@routeData routeData, @serverContext context: ServerContext<ServerContextData>) {
+        if (!context.data.imagesPhysicalPath)
+            throw errors.configFieldNull("imagesPhysicalPath");
+
+        let fileVirtaulPath = routeData["_"];
+        let filePhysicalPath = path.join(context.data.imagesPhysicalPath, fileVirtaulPath);
+        if (fs.existsSync(filePhysicalPath) == false)
+            throw errors.fileNotExist(filePhysicalPath);
+
+        let buffer: Buffer = fs.readFileSync(filePhysicalPath);
+
+        return new ContentResult(buffer, imageContextTypes.jpeg);
     }
 
     @action()

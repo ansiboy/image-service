@@ -22,3 +22,4 @@ export class Image {
     @Column({ type: "int", nullable: true })
     height: number;
 }
+

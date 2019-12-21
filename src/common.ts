@@ -1,17 +1,8 @@
 import * as fs from 'fs'
 import * as mysql from 'mysql';
 import { errors } from './errors';
+import { Settings } from './types';
 
-export interface Settings {
-    port: number,
-    db: {
-        host: string,
-        port: number,
-        database: string,
-        user: string,
-        password: string
-    }
-}
 
 export let settings = {} as Settings;
 

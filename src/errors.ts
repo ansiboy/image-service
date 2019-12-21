@@ -1,3 +1,5 @@
+import { Settings } from "./types";
+
 class Errors {
     dataFormatError(): any {
         return new Error('Data format error.');
@@ -14,12 +16,15 @@ class Errors {
         error.name = this.argumentFieldNull.name;
         return error;
     }
-    configFieldNull(name: string) {
+    configFieldNull(name: keyof Settings) {
         let msg = `Config field '${name}' is null.`
         return new Error(msg)
     }
     parameterRequired(name: string) {
         return new Error(`Parameter '${name}' is required.`)
+    }
+    fileNotExist(path:string){
+        return new Error(`File ${path} is not exists.`);
     }
 }
 
