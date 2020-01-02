@@ -1,6 +1,6 @@
 {
   "name": "maishu-image-service",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "",
   "main": "./out/index.js",
   "typings": "./out/index.d.ts",
@@ -17,6 +17,7 @@
     "json5": "^2.1.0",
     "maishu-node-mvc": "^1.82.0",
     "mysql": "^2.16.0",
+    "remove": "^0.1.5",
     "typeorm": "^0.2.18"
   },
   "files": [

@@ -4,6 +4,7 @@ import { errors } from './errors';
 import path = require("path");
 import { ServerContextData, Settings } from './types';
 
+export { Settings } from './types';
 
 export function start(settings: Settings) {
     if (!settings)
