@@ -1,7 +1,6 @@
 import { settings as commonSettings } from './common'
-import { startServer } from 'maishu-node-mvc';
+import { startServer, VirtualDirectory } from 'maishu-node-mvc';
 import { errors } from './errors';
-import path = require("path");
 import { ServerContextData, Settings } from './types';
 
 export { Settings } from './types';
@@ -20,9 +19,10 @@ export function start(settings: Settings) {
     // createDataContext();
     //===========================
     let contextData: ServerContextData = { imagesPhysicalPath: settings.imagesPhysicalPath };
+    let root = new VirtualDirectory(__dirname);
     startServer({
         port: settings.port,
-        controllerDirectory: path.join(__dirname, "controllers"),
+        controllerDirectory: root.getDirectory("controllers"),
         serverContextData: contextData,
     })
 }
