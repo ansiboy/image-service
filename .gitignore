@@ -4,5 +4,6 @@ node_modules
 out
 # 该文件用于本机测试
 index.js 
+Images
 
 

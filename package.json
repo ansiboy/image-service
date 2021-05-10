@@ -1,6 +1,6 @@
 {
   "name": "maishu-image-service",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "",
   "main": "./out/index.js",
   "typings": "./out/index.d.ts",
@@ -11,12 +11,12 @@
   "license": "MIT",
   "homepage": "https://github.com/ansiboy/image-service#readme",
   "dependencies": {
-    "@types/jimp": "^0.2.28",
     "@types/mysql": "^2.15.6",
-    "jimp": "^0.9.3",
+    "jimp": "^0.9.8",
     "json5": "^2.1.0",
-    "maishu-node-mvc": "^1.82.0",
+    "maishu-node-mvc": "^1.98.4",
     "mysql": "^2.16.0",
+    "remove": "^0.1.5",
     "typeorm": "^0.2.18"
   },
   "files": [
