@@ -178,10 +178,6 @@ async function addImage(image: string, width: number, height: number, applicatio
                 return;
             }
 
-            // let result = {
-            //     data: JSON.stringify({ id: item.id }),
-            //     contentType: contentTypes.application_json
-            // };
             resolve({ id: item.id });
         })
 
@@ -199,7 +195,7 @@ async function removeImage(id: string, application_id: string) {
                 return
             }
 
-            resolve()
+            resolve({})
         })
         conn.end()
     })
