@@ -11,6 +11,7 @@ import * as querystring from 'querystring';
 import { ServerContextData } from "../types";
 import path = require("path");
 import fs = require("fs");
+import http = require("http");
 
 @controller("/")
 export class HomeController {
@@ -20,8 +21,8 @@ export class HomeController {
     }
 
     @action("/Images/*")
-    async Image(@routeData routeData, @serverContext context: ServerContext<ServerContextData>) {
-        if (!context.data.imagesPhysicalPath)
+    async Image(@routeData routeData: any, @serverContext context: ServerContext<ServerContextData>) {
+        if (!context.data?.imagesPhysicalPath)
             throw errors.configFieldNull("imagesPhysicalPath");
 
         let fileVirtaulPath = routeData["_"];
@@ -35,13 +36,20 @@ export class HomeController {
     }
 
     @action()
-    async image(@routeData { id, width, height }) {
-        if (!id)
+    async image(@routeData d: { id: string, width: string | number, height: string | number }) {
+        if (!d.id)
             throw errors.argumentNull('id')
 
-        let buffer: Buffer
-        let r = await getImage(id)
-        buffer = r.buffer
+        let r = await getImage(d.id);
+        let arr = r.base64.split(",");
+        if (arr.length != 2) {
+            throw errors.dataFormatError();
+        }
+
+        let buffer = Buffer.from(arr[1], 'base64');
+        let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
+        let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
+
         if (width != null || height != null) {
             if (height == null) {
                 height = width / r.width * r.height
@@ -58,22 +66,41 @@ export class HomeController {
     }
 
     @action()
-    async upload(@routeData { image, width, height }, @request req: IncomingMessage) {
+    async base64(@routeData d: { id: string, width: string | number, height: string | number }) {
+        if (!d.id)
+            throw errors.argumentNull('id');
+
+        let r = await getImage(d.id);
+        if (r == null)
+            throw errors.objectNotExists("image", d.id);
+
+        return r.base64;
+    }
+
+    @action()
+    async upload(@routeData d: { image: string, width: string | number, height: string | number }, @request req: IncomingMessage) {
+        let image = d.image;
+        let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
+        let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
+
         let applicationId = getApplicationId(req);
         let result = await addImage(image, width, height, applicationId);
         return result
     }
 
     @action()
-    async remove(@routeData { id }, @request req: IncomingMessage) {
+    async remove(@routeData d: { id: string }, @request req: IncomingMessage) {
+        if (d.id)
+            throw errors.argumentNull('id');
+
         let applicationId = getApplicationId(req);
-        await removeImage(id, applicationId);
-        return { id }
+        await removeImage(d.id, applicationId);
+        return { id: d.id }
     }
 
     @action()
-    async list(@request req) {
-        return list(req)
+    async list(@request req: http.IncomingMessage) {
+        return list(req);
     }
 }
 
@@ -92,8 +119,8 @@ const imageContextTypes = {
     webp: 'image/webp'
 }
 
-async function getImage(id) {
-    type ImageData = { buffer: Buffer, width: number, height: number }
+async function getImage(id: string) {
+    type ImageData = { base64: string, width: number, height: number }
     return new Promise<ImageData>((resolve, reject) => {
 
         let conn = createConnection();
@@ -111,14 +138,9 @@ async function getImage(id) {
                 return;
             }
 
-            let arr = (rows[0].data || '').split(',');
-            if (arr.length != 2) {
-                reject(errors.dataFormatError());
-                return;
-            }
 
-            let buffer = Buffer.from(arr[1], 'base64');
-            resolve({ buffer: buffer, width: rows[0].width, height: rows[0].height })
+
+            resolve({ base64: rows[0].data, width: rows[0].width, height: rows[0].height })
             return;
         });
 
@@ -215,7 +237,7 @@ type SelectArguments = {
 }
 
 function getApplicationId(req: IncomingMessage): string {
-    let obj = parseQueryString(req);
+    let obj: any = parseQueryString(req);
     let application_id = obj['application-id'] || req.headers['application-id'];
     return application_id;
 }
@@ -309,7 +331,7 @@ async function list(req: IncomingMessage) {
 }
 
 function parseQueryString(req: IncomingMessage): object {
-    let urlInfo = url.parse(req.url);
+    let urlInfo = url.parse(req.url || "");
     let { search } = urlInfo;
     let contentType = req.headers['content-type'] || '' as string;
     if (!search)

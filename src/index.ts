@@ -22,7 +22,8 @@ export function start(settings: Settings) {
     let root = new VirtualDirectory(__dirname);
     startServer({
         port: settings.port,
-        controllerDirectory: root.getDirectory("controllers"),
+        // controllerDirectory: root.getDirectory("controllers"),
+        websiteDirectory: __dirname,
         serverContextData: contextData,
     })
 }

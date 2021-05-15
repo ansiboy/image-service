@@ -1,6 +1,6 @@
 {
   "name": "maishu-image-service",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "",
   "main": "./out/index.js",
   "typings": "./out/index.d.ts",
@@ -14,12 +14,16 @@
     "@types/mysql": "^2.15.6",
     "jimp": "^0.9.8",
     "json5": "^2.1.0",
-    "maishu-node-mvc": "^1.98.4",
+    "maishu-node-mvc": "^2.19.1",
+    "maishu-node-web-server": "^1.19.6",
     "mysql": "^2.16.0",
     "remove": "^0.1.5",
     "typeorm": "^0.2.18"
   },
   "files": [
     "out"
-  ]
+  ],
+  "devDependencies": {
+    "@types/babel__core": "^7.1.14"
+  }
 }

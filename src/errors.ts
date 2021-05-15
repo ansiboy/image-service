@@ -4,7 +4,7 @@ class Errors {
     dataFormatError(): any {
         return new Error('Data format error.');
     }
-    objectNotExists(typeName, name): any {
+    objectNotExists(typeName: string, name: string): any {
         return new Error(`Object ${typeName} '${name}' is not exists.`)
     }
     argumentNull(name: string) {
@@ -23,7 +23,7 @@ class Errors {
     parameterRequired(name: string) {
         return new Error(`Parameter '${name}' is required.`)
     }
-    fileNotExist(path:string){
+    fileNotExist(path: string) {
         return new Error(`File ${path} is not exists.`);
     }
 }

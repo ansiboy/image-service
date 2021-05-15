@@ -130,7 +130,7 @@ export class ConstantExpression<T> extends Expression {
 
 export class MemberExpression extends Expression {
     private _name: string;
-    private _expression: Expression;
+    private _expression: Expression | undefined;
     private text;
 
     constructor(name: string, source?: Expression) {
@@ -141,7 +141,7 @@ export class MemberExpression extends Expression {
         this.text = `${name}`;
     }
 
-    get expression(): Expression {
+    get expression(): Expression | undefined {
         return this._expression;
     }
 
@@ -198,12 +198,12 @@ export class BinaryExpression extends Expression {
 export class MethodCallExpression extends Expression {
 
     private args: Expression[];
-    private method: string;
+    private method: Function;
     // private instance: any;
 
     private text: string;
 
-    constructor(method: string, args: Expression[]) {
+    constructor(method: Function, args: Expression[]) {
 
         super(ExpressionTypes.Method);
 
@@ -282,8 +282,8 @@ export class Parser {
     private token: Token;
     private tokenText: string;
 
-    private functions = {
-        iif(arg1, arg2, arg3) {
+    private functions: { [key: string]: Function } = {
+        iif(arg1: any, arg2: any, arg3: any) {
             if (arg1 == true)
                 return arg2;
 
@@ -291,7 +291,7 @@ export class Parser {
         }
     }
 
-    private constants = {
+    private constants: { [key: string]: ConstantExpression<any> } = {
         'null': new ConstantExpression(null),
         'true': new ConstantExpression(true),
         'false': new ConstantExpression(false)
@@ -334,14 +334,14 @@ export class Parser {
         this.textPos = pos;
         this.ch = this.textPos < this.textLen ? this.text[this.textPos] : '\0';
     }
-    private isLetter(s) {
+    private isLetter(s: string) {
         var patrn = /[A-Za-z]/;
 
         if (!patrn.exec(s))
             return false;
         return true;
     }
-    private isDigit(s) {
+    private isDigit(s: string) {
         var patrn = /[0-9]/;
 
         if (!patrn.exec(s))
@@ -359,7 +359,7 @@ export class Parser {
             this.nextChar();
         }
 
-        var t: TokenId = null;
+        var t: TokenId | null = null;
         var tokenPos = this.textPos;
         let ch = this.ch;
         switch (ch) {
@@ -605,6 +605,7 @@ export class Parser {
             this.nextToken();
             return constant;
         }
+
         var func = this.functions[this.tokenText];
         if (func != null) {
             return this.parseFunction();

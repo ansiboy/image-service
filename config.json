@@ -6,5 +6,6 @@
         "database": "shop_image",
         "user": "root",
         "password": "81263"
-    }
+    },
+    "imagesPhysicalPath": "D:/projects/image-service/Images"
 }
