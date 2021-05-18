@@ -90,7 +90,7 @@ export class HomeController {
 
     @action()
     async remove(@routeData d: { id: string }, @request req: IncomingMessage) {
-        if (d.id)
+        if (!d.id)
             throw errors.argumentNull('id');
 
         let applicationId = getApplicationId(req);
