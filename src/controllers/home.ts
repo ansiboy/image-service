@@ -2,7 +2,7 @@ import { errors } from "../errors";
 import { guid, settings } from "../common";
 import * as mysql from 'mysql';
 import jimp = require("jimp");
-import { ContentResult, controller, action, serverContext, ServerContext } from 'maishu-node-mvc';
+import { controller, action, serverContext, ServerContext, RequestResult } from 'maishu-node-mvc';
 import { request, routeData } from "maishu-node-mvc";
 import { IncomingMessage } from "http";
 import * as url from 'url';
@@ -32,7 +32,9 @@ export class HomeController {
 
         let buffer: Buffer = fs.readFileSync(filePhysicalPath);
 
-        return new ContentResult(buffer, imageContextTypes.jpeg);
+        // return new ContentResult(buffer, imageContextTypes.jpeg);
+        let r: RequestResult = { content: buffer, headers: { "content-type": imageContextTypes.jpeg } };
+        return r;
     }
 
     @action()
@@ -62,7 +64,9 @@ export class HomeController {
             buffer = await resizeImage(buffer, width, height)
         }
 
-        return new ContentResult(buffer, imageContextTypes.jpeg)
+        // return new ContentResult(buffer, imageContextTypes.jpeg)
+        let cr: RequestResult = { content: buffer, headers: { "content-type": imageContextTypes.jpeg } };
+        return cr;
     }
 
     @action()

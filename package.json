@@ -1,11 +1,12 @@
 {
   "name": "maishu-image-service",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "",
   "main": "./out/index.js",
   "typings": "./out/index.d.ts",
   "scripts": {
-    "build": "tsc -p src"
+    "build": "tsc -p src",
+    "start": "node-static demo"
   },
   "author": "mai.shu",
   "license": "MIT",
@@ -14,7 +15,6 @@
     "@types/mysql": "^2.15.6",
     "jimp": "^0.9.8",
     "json5": "^2.1.0",
-    "maishu-node-mvc": "^2.19.1",
     "maishu-node-web-server": "^1.19.6",
     "mysql": "^2.16.0",
     "remove": "^0.1.5",
@@ -24,6 +24,18 @@
     "out"
   ],
   "devDependencies": {
-    "@types/babel__core": "^7.1.14"
+    "@babel/plugin-transform-modules-amd": "^7.14.2",
+    "@babel/plugin-transform-typescript": "^7.14.4",
+    "@babel/preset-env": "^7.14.4",
+    "@types/babel__core": "^7.1.14",
+    "@types/react": "^17.0.9",
+    "grunt": "^1.4.1",
+    "grunt-contrib-watch": "^1.1.0",
+    "load-grunt-tasks": "^5.1.0",
+    "maishu-chitu-scaffold": "^1.24.2",
+    "maishu-image-components": "^1.5.5",
+    "maishu-node-mvc": "^2.19.4",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   }
 }

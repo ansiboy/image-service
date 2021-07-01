@@ -1,6 +1,4 @@
 import * as fs from 'fs'
-import * as mysql from 'mysql';
-import { errors } from './errors';
 import { Settings } from './types';
 
 
