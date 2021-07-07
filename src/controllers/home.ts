@@ -31,8 +31,6 @@ export class HomeController {
             throw errors.fileNotExist(filePhysicalPath);
 
         let buffer: Buffer = fs.readFileSync(filePhysicalPath);
-
-        // return new ContentResult(buffer, imageContextTypes.jpeg);
         let r: RequestResult = { content: buffer, headers: { "content-type": imageContextTypes.jpeg } };
         return r;
     }
@@ -64,7 +62,6 @@ export class HomeController {
             buffer = await resizeImage(buffer, width, height)
         }
 
-        // return new ContentResult(buffer, imageContextTypes.jpeg)
         let cr: RequestResult = { content: buffer, headers: { "content-type": imageContextTypes.jpeg } };
         return cr;
     }
@@ -82,7 +79,9 @@ export class HomeController {
     }
 
     @action()
-    async upload(@routeData d: { image: string, width: string | number, height: string | number }, @request req: IncomingMessage) {
+    async upload(@routeData d: { image: string | Buffer, width: string | number, height: string | number }, @request req: IncomingMessage) {
+
+
         let image = d.image;
         let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
         let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
@@ -107,14 +106,6 @@ export class HomeController {
         return list(req);
     }
 }
-
-// let serverContext: ServerContext = { data: {}, controllerDefines: [] };
-// register(HomeController, serverContext)
-//     .action('index', ['/'])
-//     .action('image', ['/image'])
-//     .action('upload', ['/upload'])
-//     .action('remove', ['/remove'])
-//     .action('list', ['/list'])
 
 const imageContextTypes = {
     gif: 'image/gif',
@@ -160,30 +151,33 @@ async function resizeImage(buffer: Buffer, width: number, height: number): Promi
     return image.getBufferAsync(jimp.MIME_JPEG)
 }
 
-// const contentTypes = {
-//     application_json: 'application/json',
-//     text_plain: 'text/plain',
-// }
-
-async function addImage(image: string, width: number, height: number, application_id: string): Promise<{ id: string }> {
+async function addImage(image: string | Buffer, width: number, height: number, application_id: string): Promise<{ id: string }> {
 
     if (image == null) {
         throw errors.argumentNull("image");
     }
 
-    let arr = image.split(',');
-    if (arr.length != 2) {
-        return Promise.reject(errors.dataFormatError());
+    var b: Buffer;
+    if (typeof image == "string") {
+        let arr = image.split(',');
+        if (arr.length != 2) {
+            return Promise.reject(errors.dataFormatError());
+        }
+
+        b = Buffer.from(image, "base64");
     }
+    else {
+        b = image;
+    }
+
 
     return new Promise(async (resolve, reject) => {
 
         if (width == null || height == null) {
-            let b = new Buffer(arr[1], 'base64')
             try {
-                let image = await jimp.read(b)
-                width = image.getWidth()
-                height = image.getHeight()
+                let pic = await jimp.read(b)
+                width = pic.getWidth()
+                height = pic.getHeight()
             }
             catch (err) {
                 reject(err)
@@ -193,9 +187,10 @@ async function addImage(image: string, width: number, height: number, applicatio
 
         let value = new Date(Date.now());
         let create_date_time = `${value.getFullYear()}-${value.getMonth() + 1}-${value.getDate()} ${value.getHours()}:${value.getMinutes()}:${value.getSeconds()}`
-
         let conn = createConnection();
         let sql = `insert into image set ?`;
+        if (typeof image != "string")
+            image = `data:image;base64,${image.toString("base64")}`;
 
         let item = { id: `${guid()}_${width}_${height}`, data: image, create_date_time, application_id, width, height };
         conn.query(sql, item, (err) => {
