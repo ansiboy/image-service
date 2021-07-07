@@ -25,6 +25,11 @@ export function start(settings: Settings) {
         // controllerDirectory: root.getDirectory("controllers"),
         websiteDirectory: __dirname,
         serverContextData: contextData,
+        headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*"
+        }
     })
 }
 
