@@ -13,7 +13,6 @@
   "homepage": "https://github.com/ansiboy/image-service#readme",
   "dependencies": {
     "jimp": "^0.16.1",
-    "json5": "^2.1.0",
     "maishu-node-web-server": "^1.19.6",
     "maishu-nws-mvc": "^1.10.0",
     "maishu-router": "^1.4.8",

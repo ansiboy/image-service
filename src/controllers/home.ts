@@ -25,7 +25,7 @@ export class HomeController {
         if (!context.data?.imagesPhysicalPath)
             throw errors.configFieldNull("imagesPhysicalPath");
 
-        let fileVirtaulPath = routeData["_"];
+        let fileVirtaulPath = routeData["*"];
         let filePhysicalPath = path.join(context.data.imagesPhysicalPath, fileVirtaulPath);
         if (fs.existsSync(filePhysicalPath) == false)
             throw errors.fileNotExist(filePhysicalPath);
