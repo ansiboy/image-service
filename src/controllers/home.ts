@@ -152,7 +152,6 @@ async function resizeImage(buffer: Buffer, width: number, height: number): Promi
 }
 
 async function addImage(image: string | Buffer, width: number, height: number, application_id: string): Promise<{ id: string }> {
-
     if (image == null) {
         throw errors.argumentNull("image");
     }
@@ -164,45 +163,49 @@ async function addImage(image: string | Buffer, width: number, height: number, a
             return Promise.reject(errors.dataFormatError());
         }
 
-        b = Buffer.from(image, "base64");
+        b = Buffer.from(arr[1], "base64");
     }
     else {
         b = image;
     }
 
-
-    return new Promise(async (resolve, reject) => {
-
-        if (width == null || height == null) {
-            try {
-                let pic = await jimp.read(b)
-                width = pic.getWidth()
-                height = pic.getHeight()
-            }
-            catch (err) {
-                reject(err)
-                return
-            }
-        }
-
-        let value = new Date(Date.now());
-        let create_date_time = `${value.getFullYear()}-${value.getMonth() + 1}-${value.getDate()} ${value.getHours()}:${value.getMinutes()}:${value.getSeconds()}`
-        let conn = createConnection();
-        let sql = `insert into image set ?`;
-        if (typeof image != "string")
-            image = `data:image;base64,${image.toString("base64")}`;
-
-        let item = { id: `${guid()}_${width}_${height}`, data: image, create_date_time, application_id, width, height };
-        conn.query(sql, item, (err) => {
-            if (err) {
+    let getSize: Promise<{ width: number, height: number }> = (width == null || height == null) ?
+        new Promise((resolve, reject) => {
+            jimp.read(b).then(pic => {
+                width = pic.getWidth();
+                height = pic.getHeight();
+                resolve({ width, height });
+            }).catch(err => {
                 reject(err);
-                return;
-            }
+            })
+        }) :
+        Promise.resolve({ width, height });
 
-            resolve({ id: item.id });
+
+    return getSize.then(size => {
+        return new Promise<{ id: string, width: number, height: number, create_date_time: string }>((resolve, reject) => {
+            let value = new Date(Date.now());
+            let create_date_time = `${value.getFullYear()}-${value.getMonth() + 1}-${value.getDate()} ${value.getHours()}:${value.getMinutes()}:${value.getSeconds()}`
+            let conn = createConnection();
+            let sql = `insert into image set ?`;
+            if (typeof image != "string")
+                image = `data:image;base64,${image.toString("base64")}`;
+
+            let item = {
+                id: `${guid()}_${size.width}_${size.height}`, data: image, create_date_time,
+                application_id, width: size.width, height: size.height
+            };
+            conn.query(sql, item, (err) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                resolve({ id: item.id, width: size.width, height: size.height, create_date_time });
+            })
+
+            conn.end();
         })
-
-        conn.end();
     })
 }
 
@@ -277,7 +280,7 @@ async function list(req: IncomingMessage) {
     console.assert(config != null);
     let conn = mysql.createConnection(config);
 
-    let p1 = new Promise((resolve, reject) => {
+    let p1 = new Promise<{ id: string, width: number, height: number }>((resolve, reject) => {
         let sql: string;
         if (application_id) {
             args.filter = args.filter ?
@@ -286,13 +289,13 @@ async function list(req: IncomingMessage) {
         }
 
         if (args.filter) {
-            sql = `select id, width, height from image 
+            sql = `select id, width, height, create_date_time from image 
                    where ${args.filter}
                    order by create_date_time desc
                    limit ${args.startRowIndex}, ${args.maximumRows}`;
         }
         else {
-            sql = `select id, width, height from image 
+            sql = `select id, width, height, create_date_time from image 
                    order by create_date_time desc
                    limit ${args.startRowIndex}, ${args.maximumRows}`;
         }
