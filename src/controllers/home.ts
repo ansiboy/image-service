@@ -1,11 +1,10 @@
 import { errors } from "../errors";
-import { guid, settings } from "../common";
+import { getApplicationId, guid, parseQueryString, settings } from "../common";
 import * as mysql from 'mysql';
 import jimp = require("jimp");
 import { controller, action, serverContext, ServerContext, RequestResult } from 'maishu-node-mvc';
 import { request, routeData } from "maishu-node-mvc";
 import { IncomingMessage } from "http";
-import * as url from 'url';
 import { Parser, ExpressionTypes } from "../expression";
 import * as querystring from 'querystring';
 import { ServerContextData } from "../types";
@@ -59,10 +58,16 @@ export class HomeController {
             }
             width = typeof width == 'number' ? width : parseInt(width)
             height = typeof height == 'number' ? height : parseInt(height)
-            buffer = await resizeImage(buffer, width, height)
+            let obj = await resizeImage(buffer, width, height);
+            // buffer = obj.buffer;
+
+            return { content: obj.buffer, headers: { "content-type": obj.mine } };
         }
 
-        let cr: RequestResult = { content: buffer, headers: { "content-type": imageContextTypes.jpeg } };
+        let j = await jimp.read(buffer);
+        var mimeType = j.getMIME();
+
+        let cr: RequestResult = { content: buffer, headers: { "content-type": mimeType } };
         return cr;
     }
 
@@ -144,11 +149,14 @@ async function getImage(id: string) {
     })
 }
 
-async function resizeImage(buffer: Buffer, width: number, height: number): Promise<Buffer> {
+async function resizeImage(buffer: Buffer, width: number, height: number): Promise<{ buffer: Buffer, mine: string }> {
     height = height || width;
     let image = await jimp.read(buffer)
-    image.resize(width, height)
-    return image.getBufferAsync(jimp.MIME_JPEG)
+    image.resize(width, height);
+    let mine = image.getMIME();
+    buffer = await image.getBufferAsync(mine)
+    return { buffer, mine };
+
 }
 
 async function addImage(image: string | Buffer, width: number, height: number, application_id: string): Promise<{ id: string }> {
@@ -227,7 +235,7 @@ async function removeImage(id: string, application_id: string) {
 
 function createConnection() {
     let config = settings.db;
-    console.assert(config != null);
+    console.assert(config != null, "config is null");
     return mysql.createConnection(config)
 }
 
@@ -238,11 +246,7 @@ type SelectArguments = {
     filter?: string;
 }
 
-function getApplicationId(req: IncomingMessage): string {
-    let obj: any = parseQueryString(req);
-    let application_id = obj['application-id'] || req.headers['application-id'];
-    return application_id;
-}
+
 
 async function list(req: IncomingMessage) {
 
@@ -277,7 +281,7 @@ async function list(req: IncomingMessage) {
     args = Object.assign(defaults, args)
 
     let config = settings.db;
-    console.assert(config != null);
+    console.assert(config != null, "config is null");
     let conn = mysql.createConnection(config);
 
     let p1 = new Promise<{ id: string, width: number, height: number }>((resolve, reject) => {
@@ -332,23 +336,7 @@ async function list(req: IncomingMessage) {
 
 }
 
-function parseQueryString(req: IncomingMessage): object {
-    let urlInfo = url.parse(req.url || "");
-    let { search } = urlInfo;
-    let contentType = req.headers['content-type'] || '' as string;
-    if (!search)
-        return {};
 
-    search = search[0] == '?' ? search.substr(1) : search;
-    let result: object;
-    if (contentType.indexOf('application/json') >= 0) {
-        result = JSON.parse(search);
-    }
-    else {
-        result = querystring.parse(search);
-    }
-    return result;
-}
 
 function parsePostData(request: IncomingMessage): Promise<object> {
     let length = request.headers['content-length'] || 0;
