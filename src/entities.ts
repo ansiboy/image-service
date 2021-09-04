@@ -1,4 +1,4 @@
-import { Entity, PrimaryColumn, Column } from "typeorm";
+import { Entity, PrimaryColumn, Column } from "maishu-node-data";
 
 @Entity("image")
 export class Image {
@@ -23,3 +23,19 @@ export class Image {
     height: number;
 }
 
+@Entity("video")
+export class Video {
+
+    @PrimaryColumn({ type: "char", length: 36 })
+    id: string;
+
+    @Column({ type: "longblob" })
+    data: Buffer;
+
+    @Column({ type: "datetime" })
+    create_date_time: Date;
+
+    @Column({ type: "char", length: 36, nullable: true })
+    application_id: string;
+
+}

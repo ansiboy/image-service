@@ -26,6 +26,9 @@ class Errors {
     fileNotExist(path: string) {
         return new Error(`File ${path} is not exists.`);
     }
+    fileExist(fileName: string) {
+        return new Error(`File ${fileName} is exists.`);
+    }
 }
 
 export let errors = new Errors()
