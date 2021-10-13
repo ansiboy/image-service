@@ -22,7 +22,7 @@ export class ImageDataContext {
 
 export async function createDataContext() {
     let config = settings.db;
-    console.assert(config != null);
+    console.assert(config != null, "config is null");
     let connectionManager = getConnectionManager();
 
     let connection: Connection;

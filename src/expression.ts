@@ -575,7 +575,7 @@ export class Parser {
     }
     private parseFunction(): Expression {
         let func = this.functions[this.tokenText];
-        console.assert(func != null);
+        console.assert(func != null, "func is null");
         this.nextToken();
 
         this.validateToken(TokenId.OpenParen);
