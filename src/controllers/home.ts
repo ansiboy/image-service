@@ -2,8 +2,7 @@ import { errors } from "../errors";
 import { getApplicationId, guid, parseQueryString, settings } from "../common";
 import * as mysql from 'mysql';
 import jimp = require("jimp");
-import { controller, action, serverContext, ServerContext, RequestResult } from 'maishu-node-mvc';
-import { request, routeData } from "maishu-node-mvc";
+import { controller, action, serverContext, ServerContext, RequestResult, request, routeData } from 'maishu-node-mvc';
 import { IncomingMessage } from "http";
 import { Parser, ExpressionTypes } from "../expression";
 import * as querystring from 'querystring';
@@ -11,6 +10,12 @@ import { ServerContextData } from "../types";
 import path = require("path");
 import fs = require("fs");
 import http = require("http");
+import { createCanvas, Image } from "canvas";
+import { VideoController } from "./video";
+import * as NodeCache from "node-cache";
+
+const imageCache = new NodeCache();
+const imageContentCache = new NodeCache();
 
 @controller("/")
 export class HomeController {
@@ -39,8 +44,8 @@ export class HomeController {
         if (!d.id)
             throw errors.argumentNull('id')
 
-        let r = await getImage(d.id);
-        let arr = r.base64.split(",");
+        let imageData = await getImage(d.id);
+        let arr = imageData.base64.split(",");
         if (arr.length != 2) {
             throw errors.dataFormatError();
         }
@@ -49,28 +54,41 @@ export class HomeController {
         let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
         let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
 
+        let key = `${d.id}_${width}_${height}`;
+        let cr: RequestResult | undefined = imageContentCache.get(key);
+        if (cr) {
+            return cr;
+        }
+
+
+        // let r = {};
+
         if (width != null || height != null) {
             if (height == null) {
-                height = width / r.width * r.height
+                height = width / imageData.width * imageData.height
             }
             if (width == null) {
-                width = height / r.height * r.width
+                width = height / imageData.height * imageData.width
             }
             width = typeof width == 'number' ? width : parseInt(width)
             height = typeof height == 'number' ? height : parseInt(height)
             let obj = await resizeImage(buffer, width, height);
             // buffer = obj.buffer;
 
-            return { content: obj.buffer, headers: { "content-type": obj.mine } };
+            cr = { content: obj.buffer, headers: { "content-type": obj.mine } };
+            imageContentCache.set(key, cr);
+            return cr;
         }
 
         let j = await jimp.read(buffer);
         var mimeType = j.getMIME();
 
-        let cr: RequestResult = { content: buffer, headers: { "content-type": mimeType } };
+        cr = { content: buffer, headers: { "content-type": mimeType } };
+        imageContentCache.set(key, cr);
         return cr;
     }
 
+    /** 获取与图片编号对应图片的 Base64 */
     @action()
     async base64(@routeData d: { id: string, width: string | number, height: string | number }) {
         if (!d.id)
@@ -110,6 +128,69 @@ export class HomeController {
     async list(@request req: http.IncomingMessage) {
         return list(req);
     }
+
+    // @action()
+    // async video(@request req: IncomingMessage) {
+    //     let d = {
+    //         fileName: "T20投影仪.mp4",
+    //     }
+    //     // let req = context.req;
+    //     // let res = context.res;
+    //     let applicationId = getApplicationId(req);
+    //     let videoPath = VideoController.getVideoPaths(applicationId);
+    //     let filePath = path.join(videoPath, d.fileName);//
+    //     if (!fs.existsSync(filePath)) {
+    //         throw errors.fileNotExist(d.fileName);
+    //     }
+
+    //     debugger
+
+    //     const range = req.headers.range;
+    //     let stat = fs.statSync(filePath);
+    //     let fileSize = stat.size;
+
+    //     if (range) {
+    //         const parts = range.replace(/bytes=/, "").split("-")
+    //         const start = parseInt(parts[0], 10)
+    //         const end = parts[1]
+    //             ? parseInt(parts[1], 10)
+    //             : fileSize - 1
+
+    //         if (start >= fileSize) {
+
+    //             let r: RequestResult = { statusCode: 416, content: "Requested range not satisfiable\n start ${start} >= ${fileSize}." }
+    //             return r;
+
+    //         }
+
+    //         const chunksize = (end - start) + 1;
+    //         const file = fs.createReadStream(filePath, { start, end });
+
+    //         let r: RequestResult = {
+    //             statusCode: 206,
+    //             headers: {
+    //                 "content-range": `bytes ${start}-${end}/${fileSize}`,
+    //                 "accept-ranges": "bytes",
+    //                 "content-length": `${chunksize}`,
+    //                 "content-type": "video/mp4"
+    //             },
+    //             content: file
+    //         }
+
+    //         return r;
+    //     }
+
+    //     let stream = fs.createReadStream(filePath);
+    //     let r: RequestResult = {
+    //         headers: {
+    //             "content-length": `${fileSize}`,
+    //             "content-type": "video/mp4"
+    //         },
+    //         content: stream
+    //     }
+
+    //     return r;
+    // }
 }
 
 const imageContextTypes = {
@@ -121,32 +202,56 @@ const imageContextTypes = {
 
 async function getImage(id: string) {
     type ImageData = { base64: string, width: number, height: number }
-    return new Promise<ImageData>((resolve, reject) => {
+    let r: ImageData | undefined = imageCache.get(id);
+    if (!r) {
+        r = await new Promise<ImageData>((resolve, reject) => {
 
-        let conn = createConnection();
+            let conn = createConnection();
 
-        let sql = `select id, data, width, height from image where id = ?`;
-        conn.query(sql, id, (err, rows) => {
-            if (err) {
-                reject(err);
+            let sql = `select id, data, width, height from image where id = ?`;
+            conn.query(sql, id, (err, rows) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                if (!rows[0]) {
+
+                    let size: { width: number, height: number } = { width: 200, height: 200 };
+                    let m = /\S+_(\d+)_(\d+)/.exec(id);
+                    if (m) {
+                        size = { width: Number.parseInt(m[1]), height: Number.parseInt(m[2]) };
+                    }
+
+                    createNotExistsImage(size.width, size.height).then(base64 => {
+                        resolve({ base64, width: size.width, height: size.height });
+                    }).catch(err => {
+                        reject(err);
+                    })
+                    return;
+                }
+
+                resolve({ base64: rows[0].data, width: rows[0].width, height: rows[0].height })
                 return;
-            }
-
-            if (!rows[0]) {
-                let err = errors.objectNotExists('image', id);
-                reject(err);
-                return;
-            }
+            });
 
 
+            conn.end();
+        })
 
-            resolve({ base64: rows[0].data, width: rows[0].width, height: rows[0].height })
-            return;
-        });
+        imageCache.set(id, r);
+    }
 
 
-        conn.end();
-    })
+    return r;
+}
+
+async function createNotExistsImage(width: number, height: number): Promise<string> {
+    var canvas = createCanvas(width, height);
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#f2f2f2";
+    ctx.fillRect(0, 0, width, height);
+    return canvas.toDataURL();
 }
 
 async function resizeImage(buffer: Buffer, width: number, height: number): Promise<{ buffer: Buffer, mine: string }> {
@@ -179,13 +284,10 @@ async function addImage(image: string | Buffer, width: number, height: number, a
 
     let getSize: Promise<{ width: number, height: number }> = (width == null || height == null) ?
         new Promise((resolve, reject) => {
-            jimp.read(b).then(pic => {
-                width = pic.getWidth();
-                height = pic.getHeight();
-                resolve({ width, height });
-            }).catch(err => {
-                reject(err);
-            })
+            let base64 = b.toString("base64");
+            var image = new Image();
+            image.src = `data:image;base64,${base64}`;
+            resolve({ width: image.width, height: image.height });
         }) :
         Promise.resolve({ width, height });
 
