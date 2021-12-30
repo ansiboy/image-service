@@ -102,7 +102,7 @@ export class HomeController {
     }
 
     @action()
-    async upload(@routeData d: { image: string | Buffer, width: string | number, height: string | number }, @request req: IncomingMessage) {
+    async upload(@routeData d: { image: string | Buffer, width: string | number, height: string | number, category?: string }, @request req: IncomingMessage) {
 
 
         let image = d.image;
@@ -110,7 +110,7 @@ export class HomeController {
         let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
 
         let applicationId = getApplicationId(req);
-        let result = await addImage(image, width, height, applicationId);
+        let result = await addImage(image, width, height, applicationId, d.category);
         return result
     }
 
@@ -128,69 +128,6 @@ export class HomeController {
     async list(@request req: http.IncomingMessage) {
         return list(req);
     }
-
-    // @action()
-    // async video(@request req: IncomingMessage) {
-    //     let d = {
-    //         fileName: "T20投影仪.mp4",
-    //     }
-    //     // let req = context.req;
-    //     // let res = context.res;
-    //     let applicationId = getApplicationId(req);
-    //     let videoPath = VideoController.getVideoPaths(applicationId);
-    //     let filePath = path.join(videoPath, d.fileName);//
-    //     if (!fs.existsSync(filePath)) {
-    //         throw errors.fileNotExist(d.fileName);
-    //     }
-
-    //     debugger
-
-    //     const range = req.headers.range;
-    //     let stat = fs.statSync(filePath);
-    //     let fileSize = stat.size;
-
-    //     if (range) {
-    //         const parts = range.replace(/bytes=/, "").split("-")
-    //         const start = parseInt(parts[0], 10)
-    //         const end = parts[1]
-    //             ? parseInt(parts[1], 10)
-    //             : fileSize - 1
-
-    //         if (start >= fileSize) {
-
-    //             let r: RequestResult = { statusCode: 416, content: "Requested range not satisfiable\n start ${start} >= ${fileSize}." }
-    //             return r;
-
-    //         }
-
-    //         const chunksize = (end - start) + 1;
-    //         const file = fs.createReadStream(filePath, { start, end });
-
-    //         let r: RequestResult = {
-    //             statusCode: 206,
-    //             headers: {
-    //                 "content-range": `bytes ${start}-${end}/${fileSize}`,
-    //                 "accept-ranges": "bytes",
-    //                 "content-length": `${chunksize}`,
-    //                 "content-type": "video/mp4"
-    //             },
-    //             content: file
-    //         }
-
-    //         return r;
-    //     }
-
-    //     let stream = fs.createReadStream(filePath);
-    //     let r: RequestResult = {
-    //         headers: {
-    //             "content-length": `${fileSize}`,
-    //             "content-type": "video/mp4"
-    //         },
-    //         content: stream
-    //     }
-
-    //     return r;
-    // }
 }
 
 const imageContextTypes = {
@@ -264,7 +201,7 @@ async function resizeImage(buffer: Buffer, width: number, height: number): Promi
 
 }
 
-async function addImage(image: string | Buffer, width: number, height: number, application_id: string): Promise<{ id: string }> {
+async function addImage(image: string | Buffer, width: number, height: number, application_id: string, category?: string): Promise<{ id: string }> {
     if (image == null) {
         throw errors.argumentNull("image");
     }
@@ -303,7 +240,7 @@ async function addImage(image: string | Buffer, width: number, height: number, a
 
             let item = {
                 id: `${guid()}_${size.width}_${size.height}`, data: image, create_date_time,
-                application_id, width: size.width, height: size.height
+                application_id, width: size.width, height: size.height, category
             };
             conn.query(sql, item, (err) => {
                 if (err) {

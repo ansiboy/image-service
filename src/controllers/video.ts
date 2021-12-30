@@ -2,7 +2,7 @@ import { action, controller, request, response, routeData } from "maishu-nws-mvc
 import { getApplicationId, guid } from "../common";
 import { errors } from "../errors";
 import { IncomingMessage, ServerResponse } from "http";
-import { RequestResult } from "maishu-node-web-server";
+import { RequestResult } from "maishu-node-mvc";
 import * as fs from "fs";
 import * as path from "path";
 import { DataSourceSelectArguments } from "maishu-toolkit";
@@ -66,6 +66,7 @@ export class VideoController {
     async view(@routeData d: { fileName: string }, @request req: IncomingMessage, @response res: ServerResponse): Promise<RequestResult> {
         if (!d.fileName) throw errors.argumentNull("fileName");
 
+        d.fileName = decodeURI(d.fileName);
         let applicationId = getApplicationId(req);
         let videoPath = VideoController.getVideoPaths(applicationId);
 

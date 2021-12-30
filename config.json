@@ -1,7 +1,7 @@
 {
     "port": 48628,
     "db": {
-        "host": "127.0.0.1",
+        "host": "shop-db",
         "port": 3306,
         "database": "shop_image",
         "user": "root",
