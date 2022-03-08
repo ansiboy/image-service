@@ -1,5 +1,5 @@
 import { errors } from "../errors";
-import { getApplicationId, guid, parseQueryString, settings } from "../common";
+import { guid, parseQueryString, settings } from "../common";
 import * as mysql from 'mysql';
 import jimp = require("jimp");
 import { controller, action, serverContext, ServerContext, RequestResult, request, routeData } from 'maishu-node-mvc';
@@ -9,16 +9,25 @@ import * as querystring from 'querystring';
 import { ServerContextData } from "../types";
 import path = require("path");
 import fs = require("fs");
-import http = require("http");
 import { createCanvas, Image } from "canvas";
-import { VideoController } from "./video";
 import * as NodeCache from "node-cache";
+import { DataSourceSelectArguments } from "maishu-toolkit";
+import { appId, dataContext, ImageDataContext, userId } from "../data-context";
+import { ImageController } from "./admin-api/image-controller";
+
+const SECONDS = 1;
+const MINUTE = 60 * SECONDS;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
 
 const imageCache = new NodeCache();
-const imageContentCache = new NodeCache();
+const imageContentCache = new NodeCache({ stdTTL: DAY });
 
 @controller("/")
 export class HomeController {
+
+    private adminController = new ImageController();
+
     @action("/")
     index() {
         return "Image Service Started"
@@ -40,30 +49,46 @@ export class HomeController {
     }
 
     @action()
-    async image(@routeData d: { id: string, width: string | number, height: string | number }) {
+    async image(@dataContext dc: ImageDataContext, @routeData d: { id: string, width: string | number, height: string | number }) {
         if (!d.id)
             throw errors.argumentNull('id')
 
-        let imageData = await getImage(d.id);
+        let key = `${d.id}_${d.width || ""}_${d.height || ""}`;
+        let cr: RequestResult | undefined = imageContentCache.get(key);
+        if (cr) {
+            return cr;
+        }
+
+        // let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
+        // let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
+
+        let imageEntity = await dc.image.findOne(d.id);
+        let imageData: { base64: string, width: number, height: number };
+        if (imageEntity == null) {
+            const DEFAULT_WIDTH = 200;
+            const DEFAULT_HEIGHT = 200;
+            let { base64, mimeType } = await createNotExistsImage(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+            imageData = { base64, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
+            let buffer = Buffer.from(base64, "base64");
+            cr = { content: buffer, headers: { "content-type": mimeType } };
+            return cr;
+        }
+        else {
+            imageData = { base64: imageEntity.data, width: imageEntity.width, height: imageEntity.height }
+        }
+
+
         let arr = imageData.base64.split(",");
         if (arr.length != 2) {
             throw errors.dataFormatError();
         }
 
         let buffer = Buffer.from(arr[1], 'base64');
-        let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
-        let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
+        if (d.width != null || d.height != null) {
 
-        let key = `${d.id}_${width}_${height}`;
-        let cr: RequestResult | undefined = imageContentCache.get(key);
-        if (cr) {
-            return cr;
-        }
+            let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
+            let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
 
-
-        // let r = {};
-
-        if (width != null || height != null) {
             if (height == null) {
                 height = width / imageData.width * imageData.height
             }
@@ -73,7 +98,6 @@ export class HomeController {
             width = typeof width == 'number' ? width : parseInt(width)
             height = typeof height == 'number' ? height : parseInt(height)
             let obj = await resizeImage(buffer, width, height);
-            // buffer = obj.buffer;
 
             cr = { content: obj.buffer, headers: { "content-type": obj.mine } };
             imageContentCache.set(key, cr);
@@ -90,43 +114,27 @@ export class HomeController {
 
     /** 获取与图片编号对应图片的 Base64 */
     @action()
-    async base64(@routeData d: { id: string, width: string | number, height: string | number }) {
-        if (!d.id)
-            throw errors.argumentNull('id');
-
-        let r = await getImage(d.id);
-        if (r == null)
-            throw errors.objectNotExists("image", d.id);
-
-        return r.base64;
+    async base64(@dataContext dc: ImageDataContext, @routeData d: { id: string, width: string | number, height: string | number }) {
+        return this.adminController.base64(dc, d);
     }
 
+    /** @deprecated 使用 AdminApiController.upload */
     @action()
-    async upload(@routeData d: { image: string | Buffer, width: string | number, height: string | number, category?: string }, @request req: IncomingMessage) {
-
-
-        let image = d.image;
-        let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
-        let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
-
-        let applicationId = getApplicationId(req);
-        let result = await addImage(image, width, height, applicationId, d.category);
-        return result
+    async upload(@dataContext dc: ImageDataContext, @appId appId: string, @userId userId: string,
+        @routeData d: { image: string | Buffer, width: string | number, height: string | number, category?: string }) {
+        return this.adminController.upload(appId, userId, dc, d);
     }
 
+    /** @deprecated 使用 AdminApiController.remove */
     @action()
-    async remove(@routeData d: { id: string }, @request req: IncomingMessage) {
-        if (!d.id)
-            throw errors.argumentNull('id');
-
-        let applicationId = getApplicationId(req);
-        await removeImage(d.id, applicationId);
-        return { id: d.id }
+    async remove(@dataContext dc: ImageDataContext, @appId appId: string, @routeData d: { id: string, ids: string[] }, @request req: IncomingMessage) {
+        return this.adminController.remove(dc, appId, d);
     }
 
+    /** @deprecated 使用 AdminApiController.list */
     @action()
-    async list(@request req: http.IncomingMessage) {
-        return list(req);
+    async list(@dataContext dc: ImageDataContext, @appId appId: string, @routeData d: { args: DataSourceSelectArguments }) {
+        return this.adminController.list(dc, appId, d);
     }
 }
 
@@ -141,7 +149,7 @@ async function getImage(id: string) {
     type ImageData = { base64: string, width: number, height: number }
     let r: ImageData | undefined = imageCache.get(id);
     if (!r) {
-        r = await new Promise<ImageData>((resolve, reject) => {
+        r = await new Promise<ImageData | undefined>((resolve, reject) => {
 
             let conn = createConnection();
 
@@ -153,18 +161,7 @@ async function getImage(id: string) {
                 }
 
                 if (!rows[0]) {
-
-                    let size: { width: number, height: number } = { width: 200, height: 200 };
-                    let m = /\S+_(\d+)_(\d+)/.exec(id);
-                    if (m) {
-                        size = { width: Number.parseInt(m[1]), height: Number.parseInt(m[2]) };
-                    }
-
-                    createNotExistsImage(size.width, size.height).then(base64 => {
-                        resolve({ base64, width: size.width, height: size.height });
-                    }).catch(err => {
-                        reject(err);
-                    })
+                    resolve(undefined);
                     return;
                 }
 
@@ -183,12 +180,15 @@ async function getImage(id: string) {
     return r;
 }
 
-async function createNotExistsImage(width: number, height: number): Promise<string> {
+async function createNotExistsImage(width: number, height: number) {
     var canvas = createCanvas(width, height);
     var ctx = canvas.getContext("2d");
     ctx.fillStyle = "#f2f2f2";
     ctx.fillRect(0, 0, width, height);
-    return canvas.toDataURL();
+
+    const mimeType = "image/png";
+    const base64 = canvas.toDataURL(mimeType);
+    return { base64, mimeType };
 }
 
 async function resizeImage(buffer: Buffer, width: number, height: number): Promise<{ buffer: Buffer, mine: string }> {
@@ -287,12 +287,12 @@ type SelectArguments = {
 
 
 
-async function list(req: IncomingMessage) {
+async function list(req: IncomingMessage, application_id: string) {
 
     let postData = await parsePostData(req);
     let obj = parseQueryString(req);
     let args: SelectArguments = Object.assign({}, obj, postData);
-    let application_id = getApplicationId(req);
+    // let application_id = getApplicationId(req);
     if (application_id == null)
         throw errors.parameterRequired('application-id');
 

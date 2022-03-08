@@ -1,8 +1,9 @@
 import { EntityManager, Repository, createConnection, Connection, getConnection, getConnectionManager } from "maishu-node-data"
 import { Image, Video } from "./entities";
-import { settings } from "./common";
+import { parseQueryString, settings } from "./common";
 import path = require("path");
 import { errors } from "./errors";
+import { createParameterDecorator } from "maishu-node-mvc";
 
 export class ImageDataContext {
     private entityManager: EntityManager;
@@ -37,7 +38,7 @@ export async function createDataContext() {
             username: config.user,
             password: config.password,
             database: config.database,
-            synchronize: true,
+            synchronize: false,
             logging: true,
             connectTimeout: 1000,
             name: "shop-image",
@@ -49,5 +50,28 @@ export async function createDataContext() {
 
     let dc = new ImageDataContext(connection);
     return dc;
+}
+
+export let dataContext = createParameterDecorator(async (ctx) => {
+    let dc = await createDataContext();
+    return dc;
+})
+
+export let appId = createParameterDecorator(async (ctx) => {
+    let obj: any = parseQueryString(ctx.req);
+    let application_id = obj['application-id'] || ctx.req.headers['application-id'];
+    if (application_id == null)
+        throw errors.parameterRequired('application-id');
+
+    return application_id;
+})
+
+export let userId = createParameterDecorator(async (ctx) => {
+    let userId = ctx.req.headers['user-id'];
+    return userId;
+})
+
+export let ControllerRoots = {
+    AdminApi: "/admin-api"
 }
 

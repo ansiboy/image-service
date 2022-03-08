@@ -14,11 +14,11 @@ export function guid() {
         s4() + '-' + s4() + s4() + s4();
 }
 
-export function getApplicationId(req: IncomingMessage): string {
-    let obj: any = parseQueryString(req);
-    let application_id = obj['application-id'] || req.headers['application-id'];
-    return application_id;
-}
+// export function getApplicationId(req: IncomingMessage): string {
+//     let obj: any = parseQueryString(req);
+//     let application_id = obj['application-id'] || req.headers['application-id'];
+//     return application_id;
+// }
 
 export function parseQueryString(req: IncomingMessage): object {
     let urlInfo = url.parse(req.url || "");

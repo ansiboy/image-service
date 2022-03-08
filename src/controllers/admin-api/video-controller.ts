@@ -1,23 +1,29 @@
 import { action, controller, request, response, routeData } from "maishu-nws-mvc";
-// import { getApplicationId } from "../common";
-import { errors } from "../errors";
+import { guid } from "../../common";
+import { errors } from "../../errors";
 import { IncomingMessage, ServerResponse } from "http";
 import { RequestResult } from "maishu-node-mvc";
 import * as fs from "fs";
 import * as path from "path";
 import { DataSourceSelectArguments } from "maishu-toolkit";
-import { AdminVideoController } from "./admin-api/video-controller";
-import { appId } from "../data-context";
+import { appId, ControllerRoots } from "../../data-context";
 
-@controller("video")
-export class VideoController {
-
-    private adminVideController = new AdminVideoController();
-
-    /** @deprecated 使用  */
+@controller(`${ControllerRoots.AdminApi}/video`)
+export class AdminVideoController {
     @action()
     async upload(@routeData d: { video: Buffer, name?: string }, @request req: IncomingMessage, @appId applicationId: string) {
-        return this.adminVideController.upload(d, req, applicationId);
+        if (!d.video) throw errors.argumentNull("video");
+        if (!d.name) d.name = guid();
+
+        // let applicationId = getApplicationId(req);
+        let videoPath = AdminVideoController.getVideoPaths(applicationId);
+
+        let filePath = path.join(videoPath, d.name);
+        if (fs.existsSync(d.name))
+            throw errors.fileExist(d.name);
+
+        fs.writeFileSync(filePath, d.video);
+        return { name: d.name, filePath };
     }
 
     @action("remove/:id")
@@ -25,7 +31,7 @@ export class VideoController {
         if (!d.id) throw errors.argumentNull("id");
 
         // let applicationId = getApplicationId(req);
-        let videoPath = VideoController.getVideoPaths(applicationId);
+        let videoPath = AdminVideoController.getVideoPaths(applicationId);
         let filePath = path.join(videoPath, d.id);
         if (fs.existsSync(filePath))
             fs.unlinkSync(filePath);
@@ -41,7 +47,7 @@ export class VideoController {
         let startRowIndex = args.startRowIndex || 0;
 
         // let applicationId = getApplicationId(req);
-        let videoPath = VideoController.getVideoPaths(applicationId);
+        let videoPath = AdminVideoController.getVideoPaths(applicationId);
         let fileNames = fs.readdirSync(videoPath);
         let r = fileNames.map(fileName => {
             let filePath = path.join(videoPath, fileName);
@@ -62,7 +68,7 @@ export class VideoController {
 
         d.fileName = decodeURI(d.fileName);
         // let applicationId = getApplicationId(req);
-        let videoPath = VideoController.getVideoPaths(applicationId);
+        let videoPath = AdminVideoController.getVideoPaths(applicationId);
 
         let filePath = path.join(videoPath, d.fileName);//
         if (!fs.existsSync(filePath)) {
@@ -128,7 +134,4 @@ export class VideoController {
 
         return videoRootPath;
     }
-
-
 }
-

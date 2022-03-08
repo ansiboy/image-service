@@ -7,7 +7,7 @@ export class Image {
     @PrimaryColumn({ type: "char", length: 100 })
     id: string;
 
-    @Column({ type: "mediumtext" })
+    @Column({ type: "mediumtext", nullable: true })
     data: string;
 
     @Column({ type: "datetime" })
@@ -21,6 +21,15 @@ export class Image {
 
     @Column({ type: "int", nullable: true })
     height: number;
+
+    @Column({ type: "mediumblob", nullable: true })
+    bin: Buffer;
+
+    @Column({ type: "varchar", length: 45, nullable: true })
+    category?: string;
+
+    @Column({ type: "varchar", length: 36 })
+    user_id?: string;
 }
 
 @Entity("video")
