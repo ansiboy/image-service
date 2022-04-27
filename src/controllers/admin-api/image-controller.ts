@@ -6,6 +6,11 @@ import { Image as ImageEntity } from "../../entities";
 import { errors } from "../../errors";
 import { Image } from "canvas";
 
+export interface UploadOptions {
+    category?: string,
+    remark?: string,
+}
+
 @controller(`${ControllerRoots.AdminApi}/image`)
 export class ImageController {
 
@@ -30,18 +35,19 @@ export class ImageController {
             d.args.maximumRows = 10;
         }
 
-        let r = await DataHelper.list(dc.image, { selectArguments: d.args, fields: ["id", "create_date_time"] });
+        let r = await DataHelper.list(dc.image, { selectArguments: d.args, fields: ["id", "create_date_time", "category", "remark"] });
         return r;
     }
 
     @action()
     async upload(@appId appId: string, @userId userId: string | undefined, @dataContext dc: ImageDataContext,
-        @routeData d: { image: string | Buffer, width: string | number, height: string | number, category?: string }) {
+        @routeData d: { image: string | Buffer, width: string | number, height: string | number, category: string, remark: string }) {
         let image = d.image;
         let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
         let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
 
-        let result = await this.addImage(dc, image, width, height, appId, userId, d.category);
+
+        let result = await this.addImage(dc, image, width, height, appId, userId, { category: d.category, remark: d.remark });
         return result
     }
 
@@ -83,7 +89,7 @@ export class ImageController {
     }
 
     private async addImage(dc: ImageDataContext, image: string | Buffer, width: number, height: number, application_id: string,
-        userId: string | undefined, category?: string): Promise<{ id: string }> {
+        userId: string | undefined, options: UploadOptions): Promise<{ id: string }> {
 
         if (image == null) {
             throw errors.argumentNull("image");
@@ -118,10 +124,13 @@ export class ImageController {
         let size = await getSize;
         let item: ImageEntity = {
             id: guid(), data: image, bin: b, create_date_time: new Date(), application_id,
-            width: size.width, height: size.height, category, user_id: userId,
+            width: size.width, height: size.height, category: options.category, user_id: userId,
+            remark: options.remark,
         }
 
-        await dc.image.insert(item);
+        var r = await dc.image.insert(item);
+        if (r.raw.affectedRows != 1)
+            throw errors.inserImageFail();
 
         return { id: item.id };
     }

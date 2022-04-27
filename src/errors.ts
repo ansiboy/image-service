@@ -29,6 +29,9 @@ class Errors {
     fileExist(fileName: string) {
         return new Error(`File ${fileName} is exists.`);
     }
+    inserImageFail() {
+        return new Error(`Insert image fail.`);
+    }
 }
 
 export let errors = new Errors()

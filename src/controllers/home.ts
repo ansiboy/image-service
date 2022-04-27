@@ -13,7 +13,7 @@ import { createCanvas, Image } from "canvas";
 import * as NodeCache from "node-cache";
 import { DataSourceSelectArguments } from "maishu-toolkit";
 import { appId, dataContext, ImageDataContext, userId } from "../data-context";
-import { ImageController } from "./admin-api/image-controller";
+import { ImageController, UploadOptions } from "./admin-api/image-controller";
 
 const SECONDS = 1;
 const MINUTE = 60 * SECONDS;
@@ -22,6 +22,7 @@ const DAY = 24 * HOUR;
 
 const imageCache = new NodeCache();
 const imageContentCache = new NodeCache({ stdTTL: DAY });
+
 
 @controller("/")
 export class HomeController {
@@ -121,7 +122,7 @@ export class HomeController {
     /** @deprecated 使用 AdminApiController.upload */
     @action()
     async upload(@dataContext dc: ImageDataContext, @appId appId: string, @userId userId: string,
-        @routeData d: { image: string | Buffer, width: string | number, height: string | number, category?: string }) {
+        @routeData d: { image: string | Buffer, width: string | number, height: string | number, category: string, remark: string }) {
         return this.adminController.upload(appId, userId, dc, d);
     }
 

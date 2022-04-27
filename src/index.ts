@@ -1,4 +1,4 @@
-import { settings as commonSettings } from './common'
+import { settings } from './common'
 import { startServer, VirtualDirectory } from 'maishu-node-mvc';
 import { errors } from './errors';
 import { ServerContextData, Settings } from './types';
@@ -12,7 +12,7 @@ export function start(settings: Settings) {
     if (!settings.db)
         throw errors.argumentFieldNull("db", "options");
 
-    Object.assign(commonSettings, settings);
+    // Object.assign(commonSettings, settings);
 
     //=======================
     // 用于生成数据库

@@ -30,6 +30,9 @@ export class Image {
 
     @Column({ type: "varchar", length: 36 })
     user_id?: string;
+
+    @Column({ type: "varchar", length: 200, nullable: true })
+    remark?: string;
 }
 
 @Entity("video")

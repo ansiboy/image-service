@@ -3,7 +3,16 @@ import * as querystring from 'querystring';
 import { IncomingMessage } from "http";
 import * as url from "url";
 
-export let settings = {} as Settings;
+
+function getSettings(): Settings {
+
+    let config = require("../config.json");
+    return config;
+}
+
+export let settings = getSettings();
+
+
 export function guid() {
     function s4() {
         return Math.floor((1 + Math.random()) * 0x10000)
