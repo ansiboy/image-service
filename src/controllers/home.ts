@@ -1,28 +1,28 @@
 import { errors } from "../errors";
-import { guid, parseQueryString, settings } from "../common";
-import * as mysql from 'mysql';
 import jimp = require("jimp");
 import { controller, action, serverContext, ServerContext, RequestResult, request, routeData } from 'maishu-node-mvc';
 import { IncomingMessage } from "http";
-import { Parser, ExpressionTypes } from "../expression";
-import * as querystring from 'querystring';
 import { ServerContextData } from "../types";
 import path = require("path");
 import fs = require("fs");
-import { createCanvas, Image } from "canvas";
+import { createCanvas } from "canvas";
 import * as NodeCache from "node-cache";
 import { DataSourceSelectArguments } from "maishu-toolkit";
-import { appId, dataContext, ImageDataContext, userId } from "../data-context";
-import { ImageController, UploadOptions } from "./admin-api/image-controller";
+import { appId, createDataContext, dataContext, ImageDataContext, userId } from "../data-context";
+import { ImageController } from "./admin-api/image-controller";
+import { logger } from "../logger";
+import * as webp from "webp-converter";
+
+webp.grant_permission();
 
 const SECONDS = 1;
 const MINUTE = 60 * SECONDS;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-const imageCache = new NodeCache();
 const imageContentCache = new NodeCache({ stdTTL: DAY });
 
+const imageLatestView: { [key: string]: Date } = {};
 
 @controller("/")
 export class HomeController {
@@ -32,6 +32,14 @@ export class HomeController {
     @action("/")
     index() {
         return "Image Service Started"
+    }
+
+    @action()
+    temp() {
+
+        webp.cwebp("D:/projects/image-service/out/temp.png", "D:/projects/image-service/out/temp.webp", "-q 50");
+
+        return "";
     }
 
     @action("/Images/*")
@@ -50,41 +58,34 @@ export class HomeController {
     }
 
     @action()
-    async image(@dataContext dc: ImageDataContext, @routeData d: { id: string, width: string | number, height: string | number }) {
+    async image(@dataContext dc: ImageDataContext, @routeData d: { id: string, width: string | number, height: string | number, type: "webp", q?: number }) {
         if (!d.id)
-            throw errors.argumentNull('id')
+            throw errors.argumentNull('id');
 
-        let key = `${d.id}_${d.width || ""}_${d.height || ""}`;
+        if (d.type && d.type != "webp")
+            throw new Error(`Image format ${d.type} is not supported.`);
+
+        imageLatestView[d.id] = new Date();
+        let key = `${d.id}_${d.width || ""}_${d.height || ""}_${d.type || ""}_${d.q || ""}`;
         let cr: RequestResult | undefined = imageContentCache.get(key);
         if (cr) {
             return cr;
         }
 
-        // let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
-        // let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
-
-        let imageEntity = await dc.image.findOne(d.id);
-        let imageData: { base64: string, width: number, height: number };
-        if (imageEntity == null) {
+        let imageData = await dc.image.findOne({ where: { id: d.id }, select: ["id", "bin", "width", "height", "ext"] });
+        if (imageData == null) {
             const DEFAULT_WIDTH = 200;
             const DEFAULT_HEIGHT = 200;
             let { base64, mimeType } = await createNotExistsImage(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-            imageData = { base64, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
             let buffer = Buffer.from(base64, "base64");
             cr = { content: buffer, headers: { "content-type": mimeType } };
             return cr;
         }
-        else {
-            imageData = { base64: imageEntity.data, width: imageEntity.width, height: imageEntity.height }
-        }
+
+        let buffer = imageData.bin;
 
 
-        let arr = imageData.base64.split(",");
-        if (arr.length != 2) {
-            throw errors.dataFormatError();
-        }
 
-        let buffer = Buffer.from(arr[1], 'base64');
         if (d.width != null || d.height != null) {
 
             let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
@@ -105,10 +106,30 @@ export class HomeController {
             return cr;
         }
 
-        let j = await jimp.read(buffer);
-        var mimeType = j.getMIME();
+        let ext = imageData.ext;
+        if (!ext) {
+            ext = (await jimp.read(buffer)).getExtension();
+        }
 
-        cr = { content: buffer, headers: { "content-type": mimeType } };
+        if (d.type == "webp") {
+            ext = "webp";
+            let q = d.q || 70;
+
+            let tempDirectory = path.join(__dirname, "../temp");
+            if (!fs.existsSync(tempDirectory)) {
+                fs.mkdirSync(tempDirectory);
+            }
+
+            let sourcePath = path.join(tempDirectory, imageData.id);
+            let targetPath = path.join(tempDirectory, imageData.id + ".webp");
+
+            fs.writeFileSync(sourcePath, buffer, { flag: "w" });
+            let r = await webp.cwebp(sourcePath, targetPath, `-q ${q}`);
+            if (!r)
+                buffer = fs.readFileSync(targetPath);
+        }
+
+        cr = { content: buffer, headers: { "content-type": `image/${ext}` } };
         imageContentCache.set(key, cr);
         return cr;
     }
@@ -128,8 +149,9 @@ export class HomeController {
 
     /** @deprecated 使用 AdminApiController.remove */
     @action()
-    async remove(@dataContext dc: ImageDataContext, @appId appId: string, @routeData d: { id: string, ids: string[] }, @request req: IncomingMessage) {
-        return this.adminController.remove(dc, appId, d);
+    async remove(@dataContext dc: ImageDataContext, @appId appId: string, @userId userId: string,
+        @routeData d: { id: string, ids: string[] }, @request req: IncomingMessage) {
+        return this.adminController.remove(dc, appId, userId, d);
     }
 
     /** @deprecated 使用 AdminApiController.list */
@@ -139,6 +161,21 @@ export class HomeController {
     }
 }
 
+export async function saveImageFile(bin: Buffer, imageId: string) {
+    if (!bin) throw errors.argumentNull("bin");
+    if (!imageId) throw errors.argumentNull("imageId");
+
+    let j = await jimp.read(bin);
+    let dir = path.join(__dirname, `../../log/`);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+    }
+    let imagePath = path.join(dir, `${imageId}.${j.getExtension()}`);
+    logger.info(`${imageId} 保存图片到 ${imagePath}`)
+
+    j.write(imagePath)
+}
+
 const imageContextTypes = {
     gif: 'image/gif',
     png: 'image/png',
@@ -146,40 +183,6 @@ const imageContextTypes = {
     webp: 'image/webp'
 }
 
-async function getImage(id: string) {
-    type ImageData = { base64: string, width: number, height: number }
-    let r: ImageData | undefined = imageCache.get(id);
-    if (!r) {
-        r = await new Promise<ImageData | undefined>((resolve, reject) => {
-
-            let conn = createConnection();
-
-            let sql = `select id, data, width, height from image where id = ?`;
-            conn.query(sql, id, (err, rows) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                if (!rows[0]) {
-                    resolve(undefined);
-                    return;
-                }
-
-                resolve({ base64: rows[0].data, width: rows[0].width, height: rows[0].height })
-                return;
-            });
-
-
-            conn.end();
-        })
-
-        imageCache.set(id, r);
-    }
-
-
-    return r;
-}
 
 async function createNotExistsImage(width: number, height: number) {
     var canvas = createCanvas(width, height);
@@ -202,208 +205,36 @@ async function resizeImage(buffer: Buffer, width: number, height: number): Promi
 
 }
 
-async function addImage(image: string | Buffer, width: number, height: number, application_id: string, category?: string): Promise<{ id: string }> {
-    if (image == null) {
-        throw errors.argumentNull("image");
-    }
 
-    var b: Buffer;
-    if (typeof image == "string") {
-        let arr = image.split(',');
-        if (arr.length != 2) {
-            return Promise.reject(errors.dataFormatError());
-        }
+let isRuning = false;
+setInterval(async () => {
 
-        b = Buffer.from(arr[1], "base64");
-    }
-    else {
-        b = image;
-    }
+    if (isRuning)
+        return;
 
-    let getSize: Promise<{ width: number, height: number }> = (width == null || height == null) ?
-        new Promise((resolve, reject) => {
-            let base64 = b.toString("base64");
-            var image = new Image();
-            image.src = `data:image;base64,${base64}`;
-            resolve({ width: image.width, height: image.height });
-        }) :
-        Promise.resolve({ width, height });
+    isRuning = true;
 
-
-    return getSize.then(size => {
-        return new Promise<{ id: string, width: number, height: number, create_date_time: string }>((resolve, reject) => {
-            let value = new Date(Date.now());
-            let create_date_time = `${value.getFullYear()}-${value.getMonth() + 1}-${value.getDate()} ${value.getHours()}:${value.getMinutes()}:${value.getSeconds()}`
-            let conn = createConnection();
-            let sql = `insert into image set ?`;
-            if (typeof image != "string")
-                image = `data:image;base64,${image.toString("base64")}`;
-
-            let item = {
-                id: `${guid()}_${size.width}_${size.height}`, data: image, create_date_time,
-                application_id, width: size.width, height: size.height, category
-            };
-            conn.query(sql, item, (err) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                resolve({ id: item.id, width: size.width, height: size.height, create_date_time });
-            })
-
-            conn.end();
-        })
-    })
-}
-
-async function removeImage(id: string, application_id: string) {
-    return new Promise((resolve, reject) => {
-        let conn = createConnection();
-        let sql = `delete from image where id = ? and application_id = ?`;
-        conn.query(sql, [id, application_id], (err) => {
-            if (err) {
-                reject(err)
-                return
-            }
-
-            resolve({})
-        })
-        conn.end()
-    })
-}
-
-function createConnection() {
-    let config = settings.db;
-    console.assert(config != null, "config is null");
-    return mysql.createConnection(config)
-}
-
-type SelectArguments = {
-    startRowIndex?: number;
-    maximumRows?: number;
-    sortExpression?: string;
-    filter?: string;
-}
-
-
-
-async function list(req: IncomingMessage, application_id: string) {
-
-    let postData = await parsePostData(req);
-    let obj = parseQueryString(req);
-    let args: SelectArguments = Object.assign({}, obj, postData);
-    // let application_id = getApplicationId(req);
-    if (application_id == null)
-        throw errors.parameterRequired('application-id');
-
-
-    if (args.filter) {
-        let expr = Parser.parseExpression(args.filter);
-        if (expr.type != ExpressionTypes.Binary) {
-            return Promise.reject(new Error(`Parser filter fail, filter is '${args.filter}'`));
+    try {
+        let dc = await createDataContext();
+        let keys = Object.keys(imageLatestView);
+        for (let i = 0; i < keys.length; i++) {
+            let id = keys[i];
+            await dc.image.update(id, { latest_view: imageLatestView[id] });
+            logger.info(`更新图片 ${id} 浏览时间为 ${imageLatestView[id]}`);
+            delete imageLatestView[id];
         }
     }
-    if (args.sortExpression) {
-        let expr = Parser.parseOrderExpression(args.sortExpression);
-        if (expr.type != ExpressionTypes.Order) {
-            return Promise.reject(new Error(`Parser sort expression fail, sort expression is '${args.filter}'`));
-        }
+    finally {
+        isRuning = false;
     }
 
-    let defaults: SelectArguments = {
-        startRowIndex: 0,
-        maximumRows: 10,
-        sortExpression: 'create_date_time desc',
-        filter: 'true'
-    }
-
-    args = Object.assign(defaults, args)
-
-    let config = settings.db;
-    console.assert(config != null, "config is null");
-    let conn = mysql.createConnection(config);
-
-    let p1 = new Promise<{ id: string, width: number, height: number }>((resolve, reject) => {
-        let sql: string;
-        if (application_id) {
-            args.filter = args.filter ?
-                `${args.filter} and application_id = '${application_id}'` :
-                `application_id = '${application_id}'`;
-        }
-
-        if (args.filter) {
-            sql = `select id, width, height, create_date_time from image 
-                   where ${args.filter}
-                   order by create_date_time desc
-                   limit ${args.startRowIndex}, ${args.maximumRows}`;
-        }
-        else {
-            sql = `select id, width, height, create_date_time from image 
-                   order by create_date_time desc
-                   limit ${args.startRowIndex}, ${args.maximumRows}`;
-        }
-
-        conn.query(sql, args, (err, rows) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-
-            resolve(rows);
-        });
-    })
-
-    let p2 = new Promise<number>((resolve, reject) => {
-        let sql = `select count(*) as count from image where ${args.filter} and application_id = '${application_id}' order by create_date_time desc`;
-        conn.query(sql, args, (err, rows) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-
-            resolve(rows[0].count);
-        });
-    })
-
-    conn.end();
-
-    let r = await Promise.all([p1, p2]);
-    let dataItems = r[0];
-    let totalRowCount = r[1];
-
-    return { dataItems, totalRowCount };
-
-}
+}, 1000 * 60 * 60 * 2);
 
 
 
-function parsePostData(request: IncomingMessage): Promise<object> {
-    let length = request.headers['content-length'] || 0;
-    let contentType = request.headers['content-type'] as string;
-    if (length <= 0)
-        return Promise.resolve({});
 
-    return new Promise((reslove, reject) => {
-        var text = "";
-        request.on('data', (data: { toString: () => string }) => {
-            text = text + data.toString();
-        });
 
-        request.on('end', () => {
-            let obj;
-            try {
-                if (contentType.indexOf('application/json') >= 0) {
-                    obj = JSON.parse(text)
-                }
-                else {
-                    obj = querystring.parse(text);
-                }
-                reslove(obj);
-            }
-            catch (err) {
-                reject(err);
-            }
-        })
-    });
-}
+
+
+
+

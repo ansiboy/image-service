@@ -14,11 +14,13 @@
     "dependencies": {
         "canvas": "^2.9.1",
         "jimp": "^0.16.1",
+        "log4js": "^6.4.6",
         "maishu-node-data": "^1.7.0",
         "maishu-router": "^1.4.10",
         "maishu-toolkit": "^1.8.12",
         "mysql": "^2.18.1",
-        "node-cache": "^5.1.2"
+        "node-cache": "^5.1.2",
+        "webp-converter": "^2.3.3"
     },
     "files": [
         "out"

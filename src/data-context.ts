@@ -22,7 +22,7 @@ export class ImageDataContext {
 }
 
 export async function createDataContext() {
-    let config = settings.db;
+    let config = Object.assign(settings.db, { entities: [path.join(__dirname, "entities.js")] });
     console.assert(config != null, "config is null");
     let connectionManager = getConnectionManager();
 
@@ -31,21 +31,7 @@ export async function createDataContext() {
         connection = getConnection("shop-image");
     }
     else {
-        connection = await createConnection({
-            type: "mysql",
-            host: config.host,
-            port: config.port,
-            username: config.user,
-            password: config.password,
-            database: config.database,
-            synchronize: false,
-            logging: true,
-            connectTimeout: 1000,
-            name: "shop-image",
-            entities: [
-                path.join(__dirname, "entities.js")
-            ]
-        })
+        connection = await createConnection(config);
     }
 
     let dc = new ImageDataContext(connection);

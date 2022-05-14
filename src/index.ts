@@ -19,7 +19,6 @@ export function start(settings: Settings) {
     // createDataContext();
     //===========================
     let contextData: ServerContextData = { imagesPhysicalPath: settings.imagesPhysicalPath };
-    let root = new VirtualDirectory(__dirname);
     startServer({
         port: settings.port,
         // controllerDirectory: root.getDirectory("controllers"),
@@ -32,5 +31,8 @@ export function start(settings: Settings) {
         }
     })
 }
+
+
+
 
 

@@ -8,7 +8,7 @@ export class Image {
     id: string;
 
     @Column({ type: "mediumtext", nullable: true })
-    data: string;
+    data?: string;
 
     @Column({ type: "datetime" })
     create_date_time: Date;
@@ -33,6 +33,13 @@ export class Image {
 
     @Column({ type: "varchar", length: 200, nullable: true })
     remark?: string;
+
+    /** 最后查看时间 */
+    @Column({ type: "datetime" })
+    latest_view?: Date;
+
+    @Column({ type: "varchar", length: 10, nullable: true })
+    ext?: string;
 }
 
 @Entity("video")
@@ -49,5 +56,6 @@ export class Video {
 
     @Column({ type: "char", length: 36, nullable: true })
     application_id: string;
-
 }
+
+
