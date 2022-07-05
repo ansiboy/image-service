@@ -20,6 +20,7 @@
         "maishu-toolkit": "^1.8.12",
         "mysql": "^2.18.1",
         "node-cache": "^5.1.2",
+        "node-fetch": "^2.6.7",
         "webp-converter": "^2.3.3"
     },
     "files": [
@@ -32,6 +33,7 @@
         "@types/babel__core": "^7.1.14",
         "@types/mocha": "^8.2.2",
         "@types/mysql": "^2.15.6",
+        "@types/node-fetch": "^2.6.2",
         "@types/react": "^17.0.9",
         "grunt": "^1.4.1",
         "grunt-contrib-watch": "^1.1.0",

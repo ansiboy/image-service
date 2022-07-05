@@ -2,7 +2,7 @@ import { DataHelper, In } from "maishu-node-data";
 import { action, controller, routeData } from "maishu-node-mvc";
 import { DataSourceSelectArguments, guid } from "maishu-toolkit";
 import { appId, ControllerRoots, dataContext, ImageDataContext, userId } from "../../data-context";
-import { Image as ImageEntity } from "../../entities";
+import { ImageRecord as ImageEntity } from "../../entities";
 import { errors } from "../../errors";
 import Jimp = require("jimp");
 import { logger } from "../../logger";
@@ -43,7 +43,7 @@ export class ImageController {
 
     @action()
     async upload(@appId appId: string, @userId userId: string | undefined, @dataContext dc: ImageDataContext,
-        @routeData d: { image: string | Buffer, width: string | number, height: string | number, category: string, remark: string }) {
+        @routeData d: { image: string | Buffer, width?: string | number, height?: string | number, category?: string, remark?: string }) {
 
         let actionId = Date.now();
         logger.info(`${actionId} 上传图片, appId:${appId} userId:${userId} category:${d.category}`);

@@ -5,13 +5,16 @@ import { IncomingMessage } from "http";
 import { ServerContextData } from "../types";
 import path = require("path");
 import fs = require("fs");
-import { createCanvas } from "canvas";
+import { createCanvas, Image } from "canvas";
 import * as NodeCache from "node-cache";
-import { DataSourceSelectArguments } from "maishu-toolkit";
+import { DataSourceSelectArguments, guid } from "maishu-toolkit";
 import { appId, createDataContext, dataContext, ImageDataContext, userId } from "../data-context";
 import { ImageController } from "./admin-api/image-controller";
 import { logger } from "../logger";
 import * as webp from "webp-converter";
+import fetch from "node-fetch";
+import { useDebugValue } from "react";
+import { ImageRecord } from "../entities";
 
 webp.grant_permission();
 
@@ -58,7 +61,7 @@ export class HomeController {
     }
 
     @action()
-    async image(@dataContext dc: ImageDataContext, @routeData d: { id: string, width: string | number, height: string | number, type: "webp", q?: number }) {
+    async image(@routeData d: { id: string, width?: string | number, height?: string | number, type?: "webp", q?: number }) {
         if (!d.id)
             throw errors.argumentNull('id');
 
@@ -72,8 +75,8 @@ export class HomeController {
             return cr;
         }
 
-        let imageData = await dc.image.findOne({ where: { id: d.id }, select: ["id", "bin", "width", "height", "ext"] });
-        if (imageData == null) {
+        let imageData = d.id.startsWith("http") ? await this.getImageFromURL(d.id) : await this.getImageFromDB(d.id);
+        if (imageData == null || !imageData.bin) {
             const DEFAULT_WIDTH = 200;
             const DEFAULT_HEIGHT = 200;
             let { base64, mimeType } = await createNotExistsImage(DEFAULT_WIDTH, DEFAULT_HEIGHT);
@@ -83,34 +86,34 @@ export class HomeController {
         }
 
         let buffer = imageData.bin;
-
-
-
-        if (d.width != null || d.height != null) {
-
-            let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
-            let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
-
-            if (height == null) {
-                height = width / imageData.width * imageData.height
-            }
-            if (width == null) {
-                width = height / imageData.height * imageData.width
-            }
-            width = typeof width == 'number' ? width : parseInt(width)
-            height = typeof height == 'number' ? height : parseInt(height)
-            let obj = await resizeImage(buffer, width, height);
-
-            cr = { content: obj.buffer, headers: { "content-type": obj.mine } };
-            imageContentCache.set(key, cr);
-            return cr;
-        }
-
         let ext = imageData.ext;
         if (!ext) {
             ext = (await jimp.read(buffer)).getExtension();
         }
 
+        //=========================== 缩放图片 ===========================
+        if (d.width != null || d.height != null) {
+            let width = typeof d.width == "string" ? Number.parseInt(d.width) : d.width;
+            let height = typeof d.height == "string" ? Number.parseInt(d.height) : d.height;
+
+            if (imageData.width != undefined && imageData.height != undefined) {
+                if (height == null) {
+                    height = width as number / imageData.width * imageData.height
+                }
+                if (width == null) {
+                    width = height / imageData.height * imageData.width
+                }
+            }
+
+            if (width != undefined && height != undefined) {
+                width = typeof width == 'number' ? width : parseInt(width);
+                height = typeof height == 'number' ? height : parseInt(height);
+                let obj = await resizeImage(buffer, width, height);
+                buffer = obj.buffer;
+            }
+        }
+
+        //========================== webp 图片转换 ==========================
         if (d.type == "webp") {
             ext = "webp";
             let q = d.q || 70;
@@ -120,19 +123,68 @@ export class HomeController {
                 fs.mkdirSync(tempDirectory);
             }
 
-            let sourcePath = path.join(tempDirectory, imageData.id);
-            let targetPath = path.join(tempDirectory, imageData.id + ".webp");
+            let webpDirectory = path.join(tempDirectory);
+            if (!fs.existsSync(webpDirectory)) {
+                fs.mkdirSync(webpDirectory);
+            }
+
+            let id = guid();
+            let sourcePath = path.join(webpDirectory, id);
+            let targetPath = path.join(tempDirectory, id + ".webp");
 
             fs.writeFileSync(sourcePath, buffer, { flag: "w" });
-            let r = await webp.cwebp(sourcePath, targetPath, `-q ${q}`);
-            if (!r)
+            let error = await webp.cwebp(sourcePath, targetPath, `-q ${q}`);
+            if (!error) {
                 buffer = fs.readFileSync(targetPath);
+            }
+
+            fs.unlinkSync(sourcePath);
+            fs.unlinkSync(targetPath);
         }
 
         cr = { content: buffer, headers: { "content-type": `image/${ext}` } };
         imageContentCache.set(key, cr);
         return cr;
     }
+
+    private async getImageFromDB(id: string): Promise<Partial<ImageRecord> | undefined> {
+        let dc = await createDataContext();
+        let imageData = await dc.image.findOne({ where: { id }, select: ["id", "bin", "width", "height", "ext"] });
+        return imageData;
+    }
+
+    private async getImageFromURL(url: string): Promise<Partial<ImageRecord> | undefined> {
+        let imageBinary = await this.fetchImage(url);
+        if (!imageBinary)
+            return undefined;
+
+        try {
+            let r = await jimp.read(imageBinary);
+            let width = r.getWidth();
+            let height = r.getHeight();
+            let ext = r.getExtension();
+
+            return { bin: imageBinary, width, height, ext };
+        }
+        catch (err) {
+            console.info(`Parse url binary fail by jimp.`);
+        }
+
+        return { bin: imageBinary };
+    }
+
+    async fetchImage(url: string): Promise<Buffer | null> {
+        try {
+            let r = await fetch(url);
+            let blob = await r.blob();
+            let arrayBuffer = await (blob as any).arrayBuffer();
+            return Buffer.from(arrayBuffer);
+        }
+        catch (err) {
+            return null;
+        }
+    }
+
 
     /** 获取与图片编号对应图片的 Base64 */
     @action()
@@ -143,7 +195,7 @@ export class HomeController {
     /** @deprecated 使用 AdminApiController.upload */
     @action()
     async upload(@dataContext dc: ImageDataContext, @appId appId: string, @userId userId: string,
-        @routeData d: { image: string | Buffer, width: string | number, height: string | number, category: string, remark: string }) {
+        @routeData d: { image: string | Buffer, width?: string | number, height?: string | number, category?: string, remark?: string }) {
         return this.adminController.upload(appId, userId, dc, d);
     }
 

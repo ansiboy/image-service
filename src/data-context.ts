@@ -1,5 +1,5 @@
 import { EntityManager, Repository, createConnection, Connection, getConnection, getConnectionManager } from "maishu-node-data"
-import { Image, Video } from "./entities";
+import { ImageRecord, Video } from "./entities";
 import { parseQueryString, settings } from "./common";
 import path = require("path");
 import { errors } from "./errors";
@@ -8,7 +8,7 @@ import { createParameterDecorator } from "maishu-node-mvc";
 export class ImageDataContext {
     private entityManager: EntityManager;
 
-    image: Repository<Image>;
+    image: Repository<ImageRecord>;
     video: Repository<Video>;
 
     constructor(connection: Connection) {
@@ -16,7 +16,7 @@ export class ImageDataContext {
             throw errors.argumentNull("connection");
 
         this.entityManager = connection.manager;
-        this.image = this.entityManager.getRepository(Image);
+        this.image = this.entityManager.getRepository(ImageRecord);
         this.video = this.entityManager.getRepository(Video);
     }
 }

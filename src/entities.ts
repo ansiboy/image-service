@@ -1,7 +1,7 @@
 import { Entity, PrimaryColumn, Column } from "maishu-node-data";
 
 @Entity("image")
-export class Image {
+export class ImageRecord {
 
     /** ID 格式为 GUID_WIDTH_HEIGHT */
     @PrimaryColumn({ type: "char", length: 100 })

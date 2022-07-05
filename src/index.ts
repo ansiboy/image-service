@@ -1,5 +1,4 @@
-import { settings } from './common'
-import { startServer, VirtualDirectory } from 'maishu-node-mvc';
+import { startServer } from 'maishu-node-mvc';
 import { errors } from './errors';
 import { ServerContextData, Settings } from './types';
 
