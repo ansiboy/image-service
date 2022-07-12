@@ -13,8 +13,8 @@ import { ImageController } from "./admin-api/image-controller";
 import { logger } from "../logger";
 import * as webp from "webp-converter";
 import fetch from "node-fetch";
-import { useDebugValue } from "react";
 import { ImageRecord } from "../entities";
+import * as sharp from "sharp";
 
 webp.grant_permission();
 
@@ -81,14 +81,15 @@ export class HomeController {
             const DEFAULT_HEIGHT = 200;
             let { base64, mimeType } = await createNotExistsImage(DEFAULT_WIDTH, DEFAULT_HEIGHT);
             let buffer = Buffer.from(base64, "base64");
-            cr = { content: buffer, headers: { "content-type": mimeType } };
+            cr = { content: buffer, headers: { "content-type": mimeType }, statusCode: 200 };
             return cr;
         }
 
         let buffer = imageData.bin;
         let ext = imageData.ext;
         if (!ext) {
-            ext = (await jimp.read(buffer)).getExtension();
+            var pic = await jimp.read(buffer);
+            ext = pic.getExtension();
         }
 
         //=========================== 缩放图片 ===========================
@@ -118,34 +119,25 @@ export class HomeController {
             ext = "webp";
             let q = d.q || 70;
 
-            let tempDirectory = path.join(__dirname, "../temp");
-            if (!fs.existsSync(tempDirectory)) {
-                fs.mkdirSync(tempDirectory);
-            }
-
-            let webpDirectory = path.join(tempDirectory);
-            if (!fs.existsSync(webpDirectory)) {
-                fs.mkdirSync(webpDirectory);
-            }
-
-            let id = guid();
-            let sourcePath = path.join(webpDirectory, id);
-            let targetPath = path.join(tempDirectory, id + ".webp");
-
-            fs.writeFileSync(sourcePath, buffer, { flag: "w" });
-            let error = await webp.cwebp(sourcePath, targetPath, `-q ${q}`);
-            if (!error) {
-                buffer = fs.readFileSync(targetPath);
-            }
-
-            fs.unlinkSync(sourcePath);
-            fs.unlinkSync(targetPath);
+            buffer = await sharp(buffer).webp({ quality: q }).toBuffer();
         }
 
-        cr = { content: buffer, headers: { "content-type": `image/${ext}` } };
+        cr = { content: buffer, headers: { "content-type": `image/${ext}` }, statusCode: 200 };
         imageContentCache.set(key, cr);
         return cr;
     }
+
+    /** 空白图片 */
+    @action("image/blank")
+    blank(): RequestResult {
+        let filePath = path.join(__dirname, "../../content/blank_image.png");
+        if (!fs.existsSync(filePath))
+            throw errors.fileNotExist(filePath);
+
+        let buffer = fs.readFileSync(filePath);
+        return { content: buffer, headers: { "content-type": "image/png" } }
+    }
+
 
     private async getImageFromDB(id: string): Promise<Partial<ImageRecord> | undefined> {
         let dc = await createDataContext();
@@ -158,19 +150,26 @@ export class HomeController {
         if (!imageBinary)
             return undefined;
 
+
+        let ext: string;
         try {
             let r = await jimp.read(imageBinary);
             let width = r.getWidth();
             let height = r.getHeight();
-            let ext = r.getExtension();
+            ext = r.getExtension();
 
             return { bin: imageBinary, width, height, ext };
         }
         catch (err) {
+            var u = new URL(url);
+            ext = path.extname(u.pathname);
+            if (ext && ext.startsWith(".")) {
+                ext = ext.substring(1);
+            }
             console.info(`Parse url binary fail by jimp.`);
         }
 
-        return { bin: imageBinary };
+        return { bin: imageBinary, ext };
     }
 
     async fetchImage(url: string): Promise<Buffer | null> {

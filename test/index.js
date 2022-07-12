@@ -22,9 +22,18 @@ describe("insert", function () {
         let imageData = await ctrl.fetchImage("http://shop-image.gemwon.com/image?id=2e161ac8-d6d5-01f8-0b4e-556516663b14_2250_2250&width=270&height=270");
         assert.notStrictEqual(imageData, null, "image data is null");
     });
-    it("image", async () => {
+    it("jpg image to webp", async function () {
+        this.timeout(0);
         let ctrl = new home_1.HomeController();
-        let r = await ctrl.image({ id: "https://car.gemwon.com/Content/webpic/images/pc_20220527141455.jpg", type: "webp" });
-        assert.strictEqual(r.statusCode, 200);
+        let r = await ctrl.image({ id: "https://car.gemwon.com/Content/file/202/samll_20220706170512.jpg", type: "webp" });
+        let statusCode = r.statusCode || 200;
+        assert.strictEqual(statusCode, 200);
+    });
+    it("gif image to webp", async function () {
+        this.timeout(0);
+        let ctrl = new home_1.HomeController();
+        let r = await ctrl.image({ id: "http://car.gemwon.com/Content/webpic/20220629/20220629170255_601.gif", type: "webp" });
+        let statusCode = r.statusCode || 200;
+        assert.strictEqual(statusCode, 200);
     });
 });
