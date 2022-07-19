@@ -9,3 +9,4 @@ temp*
 videos
 *.zip
 log*
+!logger.ts
