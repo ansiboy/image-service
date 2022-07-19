@@ -118,8 +118,8 @@ export class HomeController {
         if (d.type == "webp") {
             ext = "webp";
             let q = d.q || 70;
-
-            buffer = await sharp(buffer).webp({ quality: q }).toBuffer();
+            let metadata = await sharp(buffer).metadata();
+            buffer = await sharp(buffer, { pages: metadata.pages }).webp({ quality: q }).toBuffer();
         }
 
         cr = { content: buffer, headers: { "content-type": `image/${ext}` }, statusCode: 200 };
