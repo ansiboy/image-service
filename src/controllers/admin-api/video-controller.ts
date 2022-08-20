@@ -119,7 +119,7 @@ export class AdminVideoController {
     }
 
     static getVideoPaths(applicationId?: string) {
-        let videoRootPath = path.join(__dirname, "../../videos");
+        let videoRootPath = path.join(__dirname, "../../../videos");
         if (!fs.existsSync(videoRootPath)) {
             fs.mkdirSync(videoRootPath);
         }
